@@ -1,0 +1,6 @@
+{
+  "name": "FreightCore - Container & Inventory Management",
+  "description": "Enterprise container, shipment, and warehouse inventory management platform with real-time stock-in/out tracking, container-level balance calculation, audit logs, and Excel/PDF reporting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
