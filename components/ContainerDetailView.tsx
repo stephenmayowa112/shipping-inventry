@@ -115,6 +115,9 @@ export function ContainerDetailView({
           <div>
             {!isEditingTitle ? (
               <div>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200 inline-block mb-1">
+                  Deep Down Logistics
+                </span>
                 <div className="flex items-center space-x-2">
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                     {container.name}

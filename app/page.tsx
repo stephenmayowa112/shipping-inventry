@@ -91,9 +91,9 @@ export default function Home() {
       <footer className="border-t border-slate-200 bg-white py-4 text-xs text-slate-500">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
           <div className="flex items-center space-x-2">
-            <span className="font-bold text-slate-700">Container Inventory Tracker</span>
+            <span className="font-bold text-slate-800">Deep Down Logistics</span>
             <span className="text-slate-300">•</span>
-            <span>Simple stock tracking for containers</span>
+            <span>Container Inventory & Goods Tracking</span>
           </div>
 
           <div className="flex items-center space-x-3 text-[11px]">

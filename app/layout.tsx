@@ -2,17 +2,17 @@ import type {Metadata} from 'next';
 import './globals.css'; // Global styles
 
 export const metadata: Metadata = {
-  title: 'FreightCore - Container & Inventory Management',
-  description: 'Enterprise container, shipment, and warehouse inventory management platform with real-time stock-in/out tracking, container-level balance calculation, audit logs, and Excel/PDF reporting.',
+  title: 'Deep Down Logistics - Container Inventory',
+  description: 'Minimalist container inventory and goods tracking for Deep Down Logistics. Easily view goods inside containers, log items taken away, and export to Excel or PDF.',
   openGraph: {
-    title: 'FreightCore - Container & Inventory Management',
-    description: 'Enterprise container, shipment, and warehouse inventory management platform with real-time stock-in/out tracking, container-level balance calculation, audit logs, and Excel/PDF reporting.',
+    title: 'Deep Down Logistics - Container Inventory',
+    description: 'Minimalist container inventory and goods tracking for Deep Down Logistics. Easily view goods inside containers, log items taken away, and export to Excel or PDF.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FreightCore - Container & Inventory Management',
-    description: 'Enterprise container, shipment, and warehouse inventory management platform with real-time stock-in/out tracking, container-level balance calculation, audit logs, and Excel/PDF reporting.',
+    title: 'Deep Down Logistics - Container Inventory',
+    description: 'Minimalist container inventory and goods tracking for Deep Down Logistics. Easily view goods inside containers, log items taken away, and export to Excel or PDF.',
   },
 };
 

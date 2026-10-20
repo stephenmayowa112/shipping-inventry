@@ -12,6 +12,8 @@ export function exportSingleContainerToExcel(container: Container): void {
   // Sheet 1: Current Items Inside Container
   const itemsData = container.items.map((item, index) => ({
     '#': index + 1,
+    'Company': 'Deep Down Logistics',
+    'Container': container.name,
     'Item Name': item.name,
     'Current Quantity Left': item.quantity,
     'Unit': item.unit,
@@ -25,6 +27,8 @@ export function exportSingleContainerToExcel(container: Container): void {
   if (itemsData.length > 0) {
     itemsData.push({
       '#': '' as any,
+      'Company': 'Deep Down Logistics',
+      'Container': container.name,
       'Item Name': 'TOTAL GOODS IN CONTAINER',
       'Current Quantity Left': totalGoods,
       'Unit': 'items',
@@ -34,12 +38,13 @@ export function exportSingleContainerToExcel(container: Container): void {
   }
 
   const wsItems = XLSX.utils.json_to_sheet(itemsData);
-  XLSX.utils.book_append_sheet(wb, wsItems, 'Goods Inside Container');
+  XLSX.utils.book_append_sheet(wb, wsItems, 'Goods in Container');
 
   // Sheet 2: History of Items Removed / Added
   if (container.history && container.history.length > 0) {
     const historyData = container.history.map((h, index) => ({
       '#': index + 1,
+      'Company': 'Deep Down Logistics',
       'Date & Time': h.date,
       'Action': h.action === 'removed' ? 'REMOVED / TOOK OUT' : 'ADDED STOCK',
       'Item Name': h.itemName,
@@ -52,7 +57,7 @@ export function exportSingleContainerToExcel(container: Container): void {
   }
 
   const cleanName = container.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-  XLSX.writeFile(wb, `${cleanName}_Inventory_${dateStr}.xlsx`);
+  XLSX.writeFile(wb, `Deep_Down_Logistics_${cleanName}_Inventory_${dateStr}.xlsx`);
 }
 
 // Export ALL containers to Excel (.xlsx)
@@ -66,6 +71,7 @@ export function exportAllContainersToExcel(containers: Container[]): void {
     const totalGoodsCount = c.items.reduce((sum, item) => sum + item.quantity, 0);
     return {
       '#': idx + 1,
+      'Company': 'Deep Down Logistics',
       'Container Name': c.name,
       'Note / Location': c.note || '—',
       'Different Products': totalItemsCount,
@@ -81,6 +87,7 @@ export function exportAllContainersToExcel(containers: Container[]): void {
   containers.forEach(c => {
     c.items.forEach(item => {
       allItemsData.push({
+        'Company': 'Deep Down Logistics',
         'Container': c.name,
         'Item Name': item.name,
         'Current Quantity Left': item.quantity,
@@ -97,6 +104,7 @@ export function exportAllContainersToExcel(containers: Container[]): void {
   containers.forEach(c => {
     c.history.forEach(h => {
       allHistoryData.push({
+        'Company': 'Deep Down Logistics',
         'Date & Time': h.date,
         'Container': c.name,
         'Action': h.action === 'removed' ? 'REMOVED / TOOK OUT' : 'ADDED STOCK',
@@ -112,7 +120,7 @@ export function exportAllContainersToExcel(containers: Container[]): void {
     XLSX.utils.book_append_sheet(wb, wsHistory, 'Removal History');
   }
 
-  XLSX.writeFile(wb, `All_Containers_Inventory_${dateStr}.xlsx`);
+  XLSX.writeFile(wb, `Deep_Down_Logistics_All_Containers_${dateStr}.xlsx`);
 }
 
 // Generate clean, printable PDF for a single container
@@ -120,15 +128,22 @@ export function exportSingleContainerToPdf(container: Container): void {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   let y = 18;
 
-  // Header Box
-  doc.setFillColor(30, 41, 59); // slate-800
-  doc.rect(14, 12, 182, 16, 'F');
+  // Header Box - Deep Down Logistics
+  doc.setFillColor(15, 23, 42); // slate-900
+  doc.rect(14, 12, 182, 18, 'F');
+  
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(255, 255, 255);
-  doc.text('CONTAINER INVENTORY SHEET', 18, 22.5);
+  doc.text('DEEP DOWN LOGISTICS', 18, 20);
 
-  y = 35;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(203, 213, 225); // slate-300
+  doc.text('Container Inventory & Current Goods Sheet', 18, 26);
+
+  y = 37;
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(15, 23, 42);
   doc.text(container.name, 14, y);
@@ -146,7 +161,7 @@ export function exportSingleContainerToPdf(container: Container): void {
   y += 7;
   doc.setFontSize(9);
   doc.setTextColor(100, 116, 139);
-  doc.text(`Date Printed: ${new Date().toLocaleString()}  |  Total Items Inside: ${totalGoods}`, 14, y);
+  doc.text(`Date Printed: ${new Date().toLocaleString()}  |  Total Goods Inside: ${totalGoods}`, 14, y);
 
   y += 6;
   doc.setDrawColor(226, 232, 240);
@@ -257,12 +272,12 @@ export function exportSingleContainerToPdf(container: Container): void {
   }
 
   // Footer note
-  doc.setFontSize(7.5);
+  doc.setFontSize(8);
   doc.setTextColor(148, 163, 184);
-  doc.text('Container Inventory Tracker - Always accurate, verified count.', 14, 288);
+  doc.text('Deep Down Logistics — Container Inventory System', 14, 288);
 
   const cleanName = container.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-  doc.save(`${cleanName}_Inventory_Sheet.pdf`);
+  doc.save(`Deep_Down_Logistics_${cleanName}_Inventory.pdf`);
 }
 
 // Generate printable PDF for ALL containers
@@ -270,15 +285,21 @@ export function exportAllContainersToPdf(containers: Container[]): void {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   let y = 18;
 
-  // Header Box
-  doc.setFillColor(30, 41, 59); // slate-800
-  doc.rect(14, 12, 182, 16, 'F');
+  // Header Box - Deep Down Logistics
+  doc.setFillColor(15, 23, 42); // slate-900
+  doc.rect(14, 12, 182, 18, 'F');
+  
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(255, 255, 255);
-  doc.text('MASTER CONTAINER INVENTORY SUMMARY', 18, 22.5);
+  doc.text('DEEP DOWN LOGISTICS', 18, 20);
 
-  y = 35;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(203, 213, 225); // slate-300
+  doc.text('Master Container Inventory Summary', 18, 26);
+
+  y = 37;
   doc.setFontSize(9);
   doc.setTextColor(100, 116, 139);
   doc.setFont('helvetica', 'normal');
@@ -326,5 +347,10 @@ export function exportAllContainersToPdf(containers: Container[]): void {
     }
   });
 
-  doc.save(`All_Containers_Inventory_Summary.pdf`);
+  // Footer note
+  doc.setFontSize(8);
+  doc.setTextColor(148, 163, 184);
+  doc.text('Deep Down Logistics — Container Inventory System', 14, 288);
+
+  doc.save(`Deep_Down_Logistics_Master_Inventory_Summary.pdf`);
 }

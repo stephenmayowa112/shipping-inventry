@@ -41,8 +41,13 @@ export function ContainerList({
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 sm:p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            Your Containers
+          <div className="flex items-center space-x-2">
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+              Deep Down Logistics
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
+            Yard Containers & Goods
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Select a container to see all items inside, remove goods, or update stock counts.

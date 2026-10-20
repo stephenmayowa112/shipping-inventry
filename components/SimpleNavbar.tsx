@@ -31,35 +31,35 @@ export function SimpleNavbar({
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16 sm:h-18 gap-3">
+        <div className="flex items-center justify-between h-16 sm:h-18 gap-2 sm:gap-4">
           
-          {/* Brand */}
+          {/* Brand - Deep Down Logistics */}
           <div 
             onClick={onGoHome}
-            className="flex items-center space-x-3 cursor-pointer group select-none shrink-0"
+            className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer group select-none shrink-0"
           >
-            <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs group-hover:bg-slate-800 transition-colors">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs group-hover:bg-slate-800 transition-colors">
               <Package className="w-5 h-5 stroke-[2.2]" />
             </div>
             <div>
               <div className="flex items-center space-x-1.5">
-                <span className="font-bold text-base sm:text-lg tracking-tight text-slate-900">
-                  Container Inventory
+                <span className="font-black text-sm sm:text-base md:text-lg tracking-tight text-slate-900">
+                  Deep Down Logistics
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">
+              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium">
                 {selectedContainerName ? (
-                  <span className="text-blue-600 font-semibold truncate max-w-[150px] inline-block align-bottom">
+                  <span className="text-blue-600 font-semibold truncate max-w-[140px] sm:max-w-[200px] inline-block align-bottom">
                     Viewing {selectedContainerName}
                   </span>
                 ) : (
-                  <span>{containers.length} Containers • {totalGoodsAll} Total Goods</span>
+                  <span>Container Inventory • {containers.length} Containers • {totalGoodsAll} Goods</span>
                 )}
               </p>
             </div>
           </div>
 
-          {/* Search box */}
+          {/* Search box for tablet and desktop */}
           <div className="flex-1 max-w-xs hidden sm:block">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -74,7 +74,7 @@ export function SimpleNavbar({
           </div>
 
           {/* Right Action buttons */}
-          <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+          <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
             {/* Export All Excel & PDF */}
             <button
               onClick={() => exportAllContainersToExcel(containers)}
@@ -98,17 +98,17 @@ export function SimpleNavbar({
             <button
               onClick={onResetDemo}
               title="Restore sample containers"
-              className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
 
             {/* Big friendly Add Container button */}
             <button
               onClick={onOpenAddContainer}
-              className="flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors"
+              className="flex items-center space-x-1 sm:space-x-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors"
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
               <span>+ Add Container</span>
             </button>
           </div>
