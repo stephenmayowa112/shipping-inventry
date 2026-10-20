@@ -55,7 +55,7 @@ export default function Home() {
       />
 
       {/* Main Container Work Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8">
         
         {/* Reset feedback message */}
         {showResetNotice && (

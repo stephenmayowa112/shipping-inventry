@@ -1,1 +1,13 @@
 @import "tailwindcss";
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+  body {
+    touch-action: manipulation;
+    overflow-x: hidden;
+  }
+}

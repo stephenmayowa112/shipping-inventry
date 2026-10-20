@@ -484,6 +484,9 @@ export function deleteItem(containerId: string, itemId: string): void {
   saveContainers(containers);
 }
 
+export const deleteItemFromContainer = deleteItem;
+export const updateContainerTitle = updateContainer;
+
 export function resetToDemoData(): void {
   saveContainers(INITIAL_CONTAINERS);
 }

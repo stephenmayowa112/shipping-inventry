@@ -9,15 +9,19 @@ import {
   FileText, 
   Trash2, 
   MapPin, 
-  CheckCircle2, 
   Clock, 
-  ArrowDownRight,
-  Package,
+  ArrowDownRight, 
   Edit2,
-  User
+  Package,
+  User,
+  ArrowUpRight
 } from 'lucide-react';
 import { exportSingleContainerToExcel, exportSingleContainerToPdf } from '@/lib/exportUtils';
-import { deleteItem, updateContainer, getLastOperatorName } from '@/lib/storage';
+import { 
+  deleteItemFromContainer, 
+  updateContainerTitle,
+  getLastOperatorName
+} from '@/lib/storage';
 import { AddItemModal } from './AddItemModal';
 import { RemoveItemModal } from './RemoveItemModal';
 import { AddStockModal } from './AddStockModal';
@@ -27,86 +31,63 @@ interface ContainerDetailViewProps {
   onBack: () => void;
 }
 
-export function ContainerDetailView({
-  container,
-  onBack
-}: ContainerDetailViewProps) {
-  // Modal states
+export function ContainerDetailView({ container, onBack }: ContainerDetailViewProps) {
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
   const [selectedRemoveItem, setSelectedRemoveItem] = useState<ContainerItem | null>(null);
   const [selectedAddStockItem, setSelectedAddStockItem] = useState<ContainerItem | null>(null);
 
-  // Editing container title state
+  // Edit container title/note state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editName, setEditName] = useState(container.name);
   const [editNote, setEditNote] = useState(container.note || '');
   const [editPersonName, setEditPersonName] = useState('');
 
-  // Quick feedback banner state
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
+  // Total count of goods currently in this container
   const totalGoods = container.items.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Delete item
   const handleDeleteItem = (item: ContainerItem) => {
-    if (window.confirm(`Delete "${item.name}" from this container?`)) {
-      deleteItem(container.id, item.id);
-      showToast(`Deleted "${item.name}".`);
+    if (window.confirm(`Are you sure you want to completely remove "${item.name}" from this container?`)) {
+      deleteItemFromContainer(container.id, item.id);
     }
   };
 
-  // Save container name edit
   const handleSaveTitle = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editName.trim() || !editPersonName.trim()) return;
-    updateContainer(container.id, editName, editPersonName, editNote);
+    updateContainerTitle(container.id, editName.trim(), editPersonName.trim(), editNote.trim());
     setIsEditingTitle(false);
-    showToast(`Container updated by ${editPersonName.trim()}.`);
   };
 
   const isTitleEditValid = editName.trim().length > 0 && editPersonName.trim().length > 0;
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-4 sm:space-y-6 pb-12 sm:pb-6">
       
-      {/* Back button */}
-      <div>
+      {/* Top Back Navigation Bar */}
+      <div className="flex items-center justify-between gap-2">
         <button
+          type="button"
           onClick={onBack}
-          className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-white border border-slate-200 transition-colors shadow-2xs"
+          className="inline-flex items-center space-x-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 active:bg-slate-100 shadow-2xs transition-colors min-h-[42px]"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>← Back to All Containers</span>
+          <ArrowLeft className="w-4 h-4 stroke-[2.2]" />
+          <span>Back to All Containers</span>
         </button>
+
+        <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
+          Deep Down Logistics Yard
+        </span>
       </div>
 
-      {/* Instant Notification Toast */}
-      {toastMessage && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-between shadow-xs animate-in fade-in duration-150">
-          <span className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            {toastMessage}
-          </span>
-          <button onClick={() => setToastMessage(null)} className="text-emerald-700 font-bold hover:underline">
-            Dismiss
-          </button>
-        </div>
-      )}
-
       {/* Container Header Banner */}
-      <div className="p-5 sm:p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="p-4 sm:p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {!isEditingTitle ? (
               <div>
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
                     Deep Down Logistics
                   </span>
                   <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
@@ -121,10 +102,11 @@ export function ContainerDetailView({
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight break-words">
                     {container.name}
                   </h1>
                   <button
+                    type="button"
                     onClick={() => {
                       setEditName(container.name);
                       setEditNote(container.note || '');
@@ -132,15 +114,16 @@ export function ContainerDetailView({
                       setIsEditingTitle(true);
                     }}
                     title="Edit container name, note, or updater"
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors shrink-0"
+                    aria-label="Edit container information"
                   >
-                    <Edit2 className="w-3.5 h-3.5" />
+                    <Edit2 className="w-4 h-4" />
                   </button>
                 </div>
 
                 {container.note && (
                   <p className="text-xs sm:text-sm text-slate-500 flex items-center gap-1.5 mt-1">
-                    <MapPin className="w-4 h-4 text-slate-400" />
+                    <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
                     <span>{container.note}</span>
                   </p>
                 )}
@@ -160,7 +143,7 @@ export function ContainerDetailView({
                     required
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="w-full text-sm sm:text-base font-bold bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-slate-900"
+                    className="w-full text-base sm:text-sm font-bold bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 min-h-[42px]"
                   />
                 </div>
 
@@ -180,7 +163,7 @@ export function ContainerDetailView({
                     value={editPersonName}
                     onChange={(e) => setEditPersonName(e.target.value)}
                     placeholder="Enter your name"
-                    className="w-full text-xs sm:text-sm font-medium bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-slate-900"
+                    className="w-full text-base sm:text-sm font-medium bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 min-h-[42px]"
                   />
                 </div>
 
@@ -193,7 +176,7 @@ export function ContainerDetailView({
                     value={editNote}
                     onChange={(e) => setEditNote(e.target.value)}
                     placeholder="Optional location or note"
-                    className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-slate-900"
+                    className="w-full text-base sm:text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 min-h-[42px]"
                   />
                 </div>
 
@@ -201,14 +184,14 @@ export function ContainerDetailView({
                   <button
                     type="submit"
                     disabled={!isTitleEditValid}
-                    className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-bold transition-colors"
+                    className="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-bold transition-colors min-h-[42px]"
                   >
                     Save Changes
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsEditingTitle(false)}
-                    className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs hover:bg-slate-100 transition-colors"
+                    className="px-4 py-2.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs hover:bg-slate-100 transition-colors min-h-[42px]"
                   >
                     Cancel
                   </button>
@@ -217,39 +200,44 @@ export function ContainerDetailView({
             )}
           </div>
 
-          {/* Action buttons */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Action buttons (Mobile-first responsive row) */}
+          <div className="flex flex-col xs:flex-row sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
             <button
-              onClick={() => exportSingleContainerToExcel(container)}
-              title="Download Excel Spreadsheet of this container"
-              className="px-3 sm:px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-700 flex items-center gap-1.5 shadow-2xs transition-colors"
-            >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-              <span>Export Excel</span>
-            </button>
-
-            <button
-              onClick={() => exportSingleContainerToPdf(container)}
-              title="Download PDF printout of this container"
-              className="px-3 sm:px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-700 flex items-center gap-1.5 shadow-2xs transition-colors"
-            >
-              <FileText className="w-4 h-4 text-rose-600" />
-              <span>Export PDF</span>
-            </button>
-
-            <button
+              type="button"
               onClick={() => setIsAddItemOpen(true)}
-              className="px-4 py-2 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-xs transition-colors"
+              className="order-1 xs:order-3 sm:order-3 px-4 py-3 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs transition-colors min-h-[44px]"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>+ Add Goods</span>
             </button>
+
+            <div className="flex items-center gap-2 order-2 xs:order-1 sm:order-1">
+              <button
+                type="button"
+                onClick={() => exportSingleContainerToExcel(container)}
+                title="Download Excel Spreadsheet of this container"
+                className="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-700 flex items-center justify-center gap-1.5 shadow-2xs transition-colors min-h-[42px]"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Export Excel</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => exportSingleContainerToPdf(container)}
+                title="Download PDF printout of this container"
+                className="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-700 flex items-center justify-center gap-1.5 shadow-2xs transition-colors min-h-[42px]"
+              >
+                <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Export PDF</span>
+              </button>
+            </div>
           </div>
 
         </div>
 
         {/* Big Key Counter */}
-        <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-4 sm:mt-5 pt-3.5 sm:pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-baseline space-x-2">
             <span className="text-3xl sm:text-4xl font-black font-mono text-emerald-700">
               {totalGoods}
@@ -259,7 +247,7 @@ export function ContainerDetailView({
             </span>
           </div>
 
-          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
             {container.items.length} Distinct Products
           </span>
         </div>
@@ -268,13 +256,13 @@ export function ContainerDetailView({
 
       {/* Goods Inside Container */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-1">
           <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-            <Package className="w-5 h-5 text-slate-700" />
+            <Package className="w-5 h-5 text-slate-700 shrink-0" />
             <span>Items Inside Container</span>
           </h2>
           <span className="text-xs text-slate-500">
-            Click <strong>Take Out</strong> when goods are removed from container
+            Tap <strong>Take Out</strong> when goods leave the container
           </span>
         </div>
 
@@ -284,8 +272,9 @@ export function ContainerDetailView({
               This container is currently empty.
             </p>
             <button
+              type="button"
               onClick={() => setIsAddItemOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-sm min-h-[44px]"
             >
               <Plus className="w-4 h-4" />
               <span>Add First Item</span>
@@ -296,58 +285,65 @@ export function ContainerDetailView({
             {container.items.map((item) => (
               <div
                 key={item.id}
-                className="p-4 sm:p-5 bg-white border border-slate-200 hover:border-slate-300 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
+                className="p-4 sm:p-5 bg-white border border-slate-200 hover:border-slate-300 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 transition-all"
               >
                 {/* Item Details */}
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-3">
-                    <span className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
+                <div className="flex items-start sm:items-center space-x-3 min-w-0">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-col items-center justify-center shrink-0">
+                    <span className="text-lg sm:text-xl font-black font-mono text-emerald-800 leading-none">
                       {item.quantity}
                     </span>
-                    <div>
-                      <h3 className="font-bold text-base sm:text-lg text-slate-900 leading-tight">
-                        {item.name}
-                      </h3>
-                      <p className="text-xs text-slate-500 font-medium">
-                        Unit: <span className="font-semibold text-slate-700">{item.unit}</span>
-                        {item.addedBy && (
-                          <span className="ml-2">
-                            • Stocked by: <span className="font-semibold text-slate-700">{item.addedBy}</span>
-                          </span>
-                        )}
-                        <span className="ml-2 text-slate-400">
-                          (Updated: {item.lastUpdated})
-                        </span>
-                      </p>
-                    </div>
+                    <span className="text-[9px] font-medium text-emerald-700 truncate max-w-[40px]">
+                      {item.unit}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-base sm:text-lg text-slate-900 leading-tight break-words">
+                      {item.name}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium flex items-center flex-wrap gap-1 mt-0.5">
+                      <span>Unit: <strong className="text-slate-700 font-semibold">{item.unit}</strong></span>
+                      {item.addedBy && (
+                        <span>• Stocked by: <strong className="text-slate-700 font-semibold">{item.addedBy}</strong></span>
+                      )}
+                      <span className="text-slate-400">
+                        • {item.lastUpdated}
+                      </span>
+                    </p>
                   </div>
                 </div>
 
-                {/* Remove & Add Actions */}
-                <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
+                {/* Remove & Add Actions - Mobile touch optimized */}
+                <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                   
                   {/* Take Out Goods Button */}
                   <button
+                    type="button"
                     onClick={() => setSelectedRemoveItem(item)}
                     disabled={item.quantity <= 0}
-                    className="px-3.5 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 font-bold text-xs sm:text-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 active:bg-amber-200 border border-amber-200 text-amber-900 font-bold text-xs sm:text-sm disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-[42px] flex items-center justify-center space-x-1"
                   >
-                    - Take Out Goods
+                    <ArrowDownRight className="w-3.5 h-3.5" />
+                    <span>Take Out Goods</span>
                   </button>
 
                   {/* Add More Stock Button */}
                   <button
+                    type="button"
                     onClick={() => setSelectedAddStockItem(item)}
-                    className="px-3.5 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 font-bold text-xs sm:text-sm transition-colors"
+                    className="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-200 text-emerald-900 font-bold text-xs sm:text-sm transition-colors min-h-[42px] flex items-center justify-center space-x-1"
                   >
-                    + Add Stock
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                    <span>+ Add Stock</span>
                   </button>
 
                   {/* Delete Item */}
                   <button
+                    type="button"
                     onClick={() => handleDeleteItem(item)}
                     title="Delete this item"
-                    className="p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                    className="min-h-[42px] min-w-[42px] flex items-center justify-center p-2 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition-colors shrink-0"
+                    aria-label="Delete item record"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -361,14 +357,14 @@ export function ContainerDetailView({
       </div>
 
       {/* Movement & Removal History */}
-      <div className="mt-8 space-y-3">
+      <div className="mt-6 sm:mt-8 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-slate-700" />
+            <Clock className="w-5 h-5 text-slate-700 shrink-0" />
             <span>Goods Taken Out & Update History</span>
           </h2>
           <span className="text-xs text-slate-400">
-            {container.history.length} audit records
+            {container.history.length} records
           </span>
         </div>
 
@@ -383,8 +379,8 @@ export function ContainerDetailView({
               const isUpdated = record.action === 'updated';
 
               return (
-                <div key={record.id} className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                  <div className="flex items-start space-x-3">
+                <div key={record.id} className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                  <div className="flex items-start space-x-2.5 min-w-0">
                     <div className={`p-1.5 rounded-lg border shrink-0 mt-0.5 ${
                       isRemoved 
                         ? 'bg-amber-50 border-amber-200 text-amber-700' 
@@ -400,8 +396,8 @@ export function ContainerDetailView({
                         <Plus className="w-4 h-4" />
                       )}
                     </div>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${
                           isRemoved 
                             ? 'bg-amber-100 text-amber-900' 
@@ -411,7 +407,7 @@ export function ContainerDetailView({
                         }`}>
                           {isRemoved ? 'Took Out' : isUpdated ? 'Updated' : 'Added Stock'}
                         </span>
-                        <strong className="text-slate-900 text-sm font-semibold">{record.itemName}</strong>
+                        <strong className="text-slate-900 text-sm font-semibold break-words">{record.itemName}</strong>
                         {record.amount > 0 && (
                           <span className="font-mono font-bold text-slate-800">
                             ({isRemoved ? `-${record.amount}` : `+${record.amount}`})
@@ -423,14 +419,14 @@ export function ContainerDetailView({
                         </span>
                       </div>
                       {record.note && (
-                        <p className="text-slate-500 mt-1 italic">
+                        <p className="text-slate-500 mt-1 italic break-words">
                           &ldquo;{record.note}&rdquo;
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between text-slate-500 text-[11px] sm:text-right shrink-0">
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between text-slate-500 text-[11px] sm:text-right shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-50">
                     <span className="font-mono font-semibold text-slate-800">
                       Balance: {record.quantityAfter}
                     </span>
