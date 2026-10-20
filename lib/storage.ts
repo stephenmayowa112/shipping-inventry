@@ -1,547 +1,395 @@
 'use client';
 
-import { Container, Shipment, ContainerItem, StockTransaction, UserProfile, UserRole } from './types';
-import { INITIAL_CONTAINERS, INITIAL_SHIPMENTS, INITIAL_ITEMS, INITIAL_TRANSACTIONS, INITIAL_USERS } from './initialData';
+import { Container, ContainerItem, ItemHistory } from './types';
 
-const STORAGE_KEYS = {
-  CONTAINERS: 'freightcore_containers_v1',
-  SHIPMENTS: 'freightcore_shipments_v1',
-  ITEMS: 'freightcore_items_v1',
-  TRANSACTIONS: 'freightcore_transactions_v1',
-  CURRENT_USER: 'freightcore_current_user_v1'
-};
+const STORAGE_KEY = 'local_biz_containers_v2';
+export const STORAGE_UPDATE_EVENT = 'local_biz_containers_updated';
 
-// Custom event to sync state across views instantly
-export const INVENTORY_UPDATE_EVENT = 'freightcore_inventory_updated';
+export const INITIAL_CONTAINERS: Container[] = [
+  {
+    id: 'cnt-1',
+    name: 'Container 1 (Yard Front)',
+    note: 'Foodstuff & Wholesale Grocery',
+    createdAt: '2026-10-15T09:00:00Z',
+    updatedAt: '2026-10-19T14:30:00Z',
+    items: [
+      {
+        id: 'itm-101',
+        containerId: 'cnt-1',
+        name: 'Cooking Oil (5 Litre Cans)',
+        quantity: 45,
+        unit: 'cans',
+        addedDate: '2026-10-15',
+        lastUpdated: '2026-10-19 14:30'
+      },
+      {
+        id: 'itm-102',
+        containerId: 'cnt-1',
+        name: 'Rice (50kg Royal Bags)',
+        quantity: 80,
+        unit: 'bags',
+        addedDate: '2026-10-15',
+        lastUpdated: '2026-10-18 10:15'
+      },
+      {
+        id: 'itm-103',
+        containerId: 'cnt-1',
+        name: 'Tomato Paste (Cartons)',
+        quantity: 60,
+        unit: 'cartons',
+        addedDate: '2026-10-15',
+        lastUpdated: '2026-10-17 16:00'
+      },
+      {
+        id: 'itm-104',
+        containerId: 'cnt-1',
+        name: 'Sugar (50kg Sacks)',
+        quantity: 25,
+        unit: 'sacks',
+        addedDate: '2026-10-15',
+        lastUpdated: '2026-10-19 09:20'
+      }
+    ],
+    history: [
+      {
+        id: 'hist-1',
+        containerId: 'cnt-1',
+        containerName: 'Container 1 (Yard Front)',
+        itemId: 'itm-101',
+        itemName: 'Cooking Oil (5 Litre Cans)',
+        action: 'removed',
+        amount: 5,
+        quantityAfter: 45,
+        note: 'Customer picked up for shop delivery',
+        date: '2026-10-19 14:30'
+      },
+      {
+        id: 'hist-2',
+        containerId: 'cnt-1',
+        containerName: 'Container 1 (Yard Front)',
+        itemId: 'itm-104',
+        itemName: 'Sugar (50kg Sacks)',
+        action: 'removed',
+        amount: 10,
+        quantityAfter: 25,
+        note: 'Sold to bakery',
+        date: '2026-10-19 09:20'
+      },
+      {
+        id: 'hist-3',
+        containerId: 'cnt-1',
+        containerName: 'Container 1 (Yard Front)',
+        itemId: 'itm-102',
+        itemName: 'Rice (50kg Royal Bags)',
+        action: 'removed',
+        amount: 20,
+        quantityAfter: 80,
+        note: 'Moved to wholesale retail front',
+        date: '2026-10-18 10:15'
+      }
+    ]
+  },
+  {
+    id: 'cnt-2',
+    name: 'Container 2 (Back Warehouse)',
+    note: 'Building Materials & Hardware',
+    createdAt: '2026-10-16T11:00:00Z',
+    updatedAt: '2026-10-19T11:00:00Z',
+    items: [
+      {
+        id: 'itm-201',
+        containerId: 'cnt-2',
+        name: 'Portland Cement (50kg)',
+        quantity: 120,
+        unit: 'bags',
+        addedDate: '2026-10-16',
+        lastUpdated: '2026-10-19 11:00'
+      },
+      {
+        id: 'itm-202',
+        containerId: 'cnt-2',
+        name: 'Galvanized Roofing Nails (Boxes)',
+        quantity: 35,
+        unit: 'boxes',
+        addedDate: '2026-10-16',
+        lastUpdated: '2026-10-17 12:00'
+      },
+      {
+        id: 'itm-203',
+        containerId: 'cnt-2',
+        name: 'Aluminium Roofing Sheets (Bundles)',
+        quantity: 18,
+        unit: 'bundles',
+        addedDate: '2026-10-16',
+        lastUpdated: '2026-10-16 11:00'
+      }
+    ],
+    history: [
+      {
+        id: 'hist-4',
+        containerId: 'cnt-2',
+        containerName: 'Container 2 (Back Warehouse)',
+        itemId: 'itm-201',
+        itemName: 'Portland Cement (50kg)',
+        action: 'removed',
+        amount: 30,
+        quantityAfter: 120,
+        note: 'Delivered to contractor site',
+        date: '2026-10-19 11:00'
+      }
+    ]
+  }
+];
 
 let cachedContainers: Container[] | null = null;
-let cachedShipments: Shipment[] | null = null;
-let cachedItems: ContainerItem[] | null = null;
-let cachedTransactions: StockTransaction[] | null = null;
-let cachedUser: UserProfile | null = null;
 
 export function subscribeToStorage(callback: () => void): () => void {
   if (typeof window === 'undefined') return () => {};
-  window.addEventListener(INVENTORY_UPDATE_EVENT, callback);
-  return () => window.removeEventListener(INVENTORY_UPDATE_EVENT, callback);
+  window.addEventListener(STORAGE_UPDATE_EVENT, callback);
+  return () => window.removeEventListener(STORAGE_UPDATE_EVENT, callback);
 }
 
 function triggerUpdate() {
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event(INVENTORY_UPDATE_EVENT));
+    window.dispatchEvent(new Event(STORAGE_UPDATE_EVENT));
   }
 }
 
-function safeGet<T>(key: string, defaultValue: T): T {
-  if (typeof window === 'undefined') return defaultValue;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return defaultValue;
-    return JSON.parse(raw);
-  } catch (e) {
-    console.error(`Error reading ${key} from localStorage:`, e);
-    return defaultValue;
-  }
-}
-
-function safeSet<T>(key: string, value: T): void {
-  if (key === STORAGE_KEYS.CONTAINERS) cachedContainers = value as unknown as Container[];
-  if (key === STORAGE_KEYS.SHIPMENTS) cachedShipments = value as unknown as Shipment[];
-  if (key === STORAGE_KEYS.ITEMS) cachedItems = value as unknown as ContainerItem[];
-  if (key === STORAGE_KEYS.TRANSACTIONS) cachedTransactions = value as unknown as StockTransaction[];
-  if (key === STORAGE_KEYS.CURRENT_USER) cachedUser = value as unknown as UserProfile;
-
+function saveContainers(containers: Container[]): void {
+  cachedContainers = containers;
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.error(`Error writing ${key} to localStorage:`, e);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(containers));
+  } catch (err) {
+    console.error('Error saving containers:', err);
   }
+  triggerUpdate();
 }
 
-// Accessors with reference stability for useSyncExternalStore
 export function getContainers(): Container[] {
   if (typeof window === 'undefined') return INITIAL_CONTAINERS;
   if (!cachedContainers) {
-    cachedContainers = safeGet<Container[]>(STORAGE_KEYS.CONTAINERS, INITIAL_CONTAINERS);
-  }
-  return cachedContainers;
-}
-
-export function getShipments(): Shipment[] {
-  if (typeof window === 'undefined') return INITIAL_SHIPMENTS;
-  if (!cachedShipments) {
-    cachedShipments = safeGet<Shipment[]>(STORAGE_KEYS.SHIPMENTS, INITIAL_SHIPMENTS);
-  }
-  return cachedShipments;
-}
-
-export function getContainerItems(): ContainerItem[] {
-  if (typeof window === 'undefined') return INITIAL_ITEMS;
-  if (!cachedItems) {
-    cachedItems = safeGet<ContainerItem[]>(STORAGE_KEYS.ITEMS, INITIAL_ITEMS);
-  }
-  return cachedItems;
-}
-
-export function getTransactions(): StockTransaction[] {
-  if (typeof window === 'undefined') return INITIAL_TRANSACTIONS;
-  if (!cachedTransactions) {
-    cachedTransactions = safeGet<StockTransaction[]>(STORAGE_KEYS.TRANSACTIONS, INITIAL_TRANSACTIONS);
-  }
-  return cachedTransactions;
-}
-
-export function getCurrentUser(): UserProfile {
-  if (typeof window === 'undefined') return INITIAL_USERS[0];
-  if (!cachedUser) {
-    cachedUser = safeGet<UserProfile>(STORAGE_KEYS.CURRENT_USER, INITIAL_USERS[0]);
-  }
-  return cachedUser;
-}
-
-export function setCurrentUser(user: UserProfile): void {
-  safeSet(STORAGE_KEYS.CURRENT_USER, user);
-  triggerUpdate();
-}
-
-export function resetToDemoData(): void {
-  cachedContainers = [...INITIAL_CONTAINERS];
-  cachedShipments = [...INITIAL_SHIPMENTS];
-  cachedItems = [...INITIAL_ITEMS];
-  cachedTransactions = [...INITIAL_TRANSACTIONS];
-  cachedUser = { ...INITIAL_USERS[0] };
-
-  safeSet(STORAGE_KEYS.CONTAINERS, INITIAL_CONTAINERS);
-  safeSet(STORAGE_KEYS.SHIPMENTS, INITIAL_SHIPMENTS);
-  safeSet(STORAGE_KEYS.ITEMS, INITIAL_ITEMS);
-  safeSet(STORAGE_KEYS.TRANSACTIONS, INITIAL_TRANSACTIONS);
-  safeSet(STORAGE_KEYS.CURRENT_USER, INITIAL_USERS[0]);
-  triggerUpdate();
-}
-
-// Container Operations
-export function registerContainer(containerData: Omit<Container, 'id' | 'createdAt' | 'updatedAt'>): Container {
-  const containers = getContainers();
-  const id = `cnt-${Date.now()}`;
-  const now = new Date().toISOString();
-
-  const newContainer: Container = {
-    ...containerData,
-    id,
-    containerNumber: containerData.containerNumber.toUpperCase().trim(),
-    createdAt: now,
-    updatedAt: now
-  };
-
-  containers.unshift(newContainer);
-  safeSet(STORAGE_KEYS.CONTAINERS, containers);
-
-  // Link to shipment if exists
-  if (newContainer.shipmentRef) {
-    const shipments = getShipments();
-    const shpIndex = shipments.findIndex(s => s.referenceNumber === newContainer.shipmentRef);
-    if (shpIndex !== -1) {
-      if (!shipments[shpIndex].associatedContainerNumbers.includes(newContainer.containerNumber)) {
-        shipments[shpIndex].associatedContainerNumbers.push(newContainer.containerNumber);
-        safeSet(STORAGE_KEYS.SHIPMENTS, shipments);
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        cachedContainers = JSON.parse(raw);
+      } else {
+        cachedContainers = INITIAL_CONTAINERS;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_CONTAINERS));
       }
+    } catch {
+      cachedContainers = INITIAL_CONTAINERS;
     }
   }
+  return cachedContainers || INITIAL_CONTAINERS;
+}
 
-  triggerUpdate();
+export function addContainer(name: string, note?: string): Container {
+  const containers = [...getContainers()];
+  const newContainer: Container = {
+    id: `cnt-${Date.now()}`,
+    name: name.trim() || `Container ${containers.length + 1}`,
+    note: note?.trim() || undefined,
+    items: [],
+    history: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  containers.unshift(newContainer);
+  saveContainers(containers);
   return newContainer;
 }
 
-export function updateContainerStatus(containerId: string, status: Container['status'], location?: string): void {
-  const containers = getContainers();
-  const index = containers.findIndex(c => c.id === containerId);
-  if (index !== -1) {
-    containers[index].status = status;
-    if (location) containers[index].location = location;
-    containers[index].updatedAt = new Date().toISOString();
-    safeSet(STORAGE_KEYS.CONTAINERS, containers);
-    triggerUpdate();
-  }
+export function updateContainer(id: string, name: string, note?: string): void {
+  const containers = getContainers().map(c => {
+    if (c.id === id) {
+      return {
+        ...c,
+        name: name.trim() || c.name,
+        note: note !== undefined ? note.trim() : c.note,
+        updatedAt: new Date().toISOString()
+      };
+    }
+    return c;
+  });
+  saveContainers(containers);
 }
 
-// Shipment Operations
-export function createShipment(shipmentData: Omit<Shipment, 'id' | 'createdAt' | 'documents'>): Shipment {
-  const shipments = getShipments();
-  const id = `shp-${Date.now()}`;
-  const now = new Date().toISOString();
-
-  const newShipment: Shipment = {
-    ...shipmentData,
-    id,
-    documents: [
-      {
-        id: `doc-${Date.now()}`,
-        name: `Shipping_Manifest_${shipmentData.referenceNumber}.pdf`,
-        type: 'Shipping Manifest',
-        uploadDate: now.split('T')[0],
-        fileSize: '1.1 MB'
-      }
-    ],
-    createdAt: now
-  };
-
-  shipments.unshift(newShipment);
-  safeSet(STORAGE_KEYS.SHIPMENTS, shipments);
-  triggerUpdate();
-  return newShipment;
+export function deleteContainer(id: string): void {
+  const containers = getContainers().filter(c => c.id !== id);
+  saveContainers(containers);
 }
 
-// Stock-In Receiving
-export interface StockInPayload {
-  containerId: string;
-  containerNumber: string;
-  shipmentRef: string;
-  itemName: string;
-  sku: string;
-  category: string;
-  unit: string;
-  quantityReceived: number;
-  expectedQuantity?: number;
-  condition: ContainerItem['condition'];
-  storageLocation: string;
-  referenceNumber: string;
-  receivingOfficer: string;
-  officerRole: UserRole;
-  notes?: string;
-}
-
-export function recordStockIn(payload: StockInPayload): { success: boolean; message: string; transactionId?: string } {
-  const items = getContainerItems();
-  const transactions = getTransactions();
-  const containers = getContainers();
-  const now = new Date().toISOString();
-
-  if (payload.quantityReceived <= 0) {
-    return { success: false, message: 'Received quantity must be greater than zero.' };
-  }
-
-  // Check if item already exists in this specific container
-  const existingItemIndex = items.findIndex(
-    i => i.containerId === payload.containerId && (i.sku.toUpperCase() === payload.sku.toUpperCase() || i.itemName.toLowerCase() === payload.itemName.toLowerCase())
-  );
-
-  let itemId: string;
-  let balanceBefore = 0;
-  let balanceAfter = 0;
-
-  if (existingItemIndex !== -1) {
-    const existing = items[existingItemIndex];
-    balanceBefore = existing.balance;
-    existing.receivedQuantity += payload.quantityReceived;
-    existing.balance = existing.receivedQuantity - existing.dispatchedQuantity;
-    balanceAfter = existing.balance;
-    existing.lastUpdated = now;
-    existing.condition = payload.condition;
-    existing.storageLocation = payload.storageLocation || existing.storageLocation;
-    itemId = existing.id;
-  } else {
-    itemId = `itm-${Date.now()}`;
-    balanceBefore = 0;
-    balanceAfter = payload.quantityReceived;
+export function addItemToContainer(
+  containerId: string,
+  name: string,
+  quantity: number,
+  unit: string
+): void {
+  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+  const containers = getContainers().map(c => {
+    if (c.id !== containerId) return c;
 
     const newItem: ContainerItem = {
-      id: itemId,
-      containerId: payload.containerId,
-      containerNumber: payload.containerNumber,
-      shipmentRef: payload.shipmentRef,
-      itemName: payload.itemName,
-      sku: payload.sku || `SKU-${Date.now().toString().slice(-5)}`,
-      category: payload.category || 'General Cargo',
-      unit: payload.unit || 'Cartons',
-      expectedQuantity: payload.expectedQuantity || payload.quantityReceived,
-      receivedQuantity: payload.quantityReceived,
-      dispatchedQuantity: 0,
-      balance: payload.quantityReceived,
-      storageLocation: payload.storageLocation || `Inside Container ${payload.containerNumber}`,
-      condition: payload.condition || 'intact',
-      lastUpdated: now
+      id: `itm-${Date.now()}`,
+      containerId,
+      name: name.trim(),
+      quantity: Math.max(0, Number(quantity) || 0),
+      unit: unit.trim() || 'items',
+      addedDate: nowStr.split(' ')[0],
+      lastUpdated: nowStr
     };
-    items.unshift(newItem);
-  }
 
-  // Record Stock Transaction
-  const txnId = `txn-${Date.now()}`;
-  const newTxn: StockTransaction = {
-    id: txnId,
-    type: 'stock_in',
-    timestamp: now,
-    containerId: payload.containerId,
-    containerNumber: payload.containerNumber,
-    shipmentRef: payload.shipmentRef,
-    itemId,
-    itemName: payload.itemName,
-    sku: payload.sku,
-    unit: payload.unit,
-    quantity: payload.quantityReceived,
-    balanceBefore,
-    balanceAfter,
-    referenceNumber: payload.referenceNumber || `RCV-${Date.now().toString().slice(-6)}`,
-    recipientOrLocation: payload.storageLocation || `Inside Container ${payload.containerNumber}`,
-    authorizedBy: payload.receivingOfficer,
-    officerRole: payload.officerRole,
-    reason: 'Stock-In Verification & Goods Received',
-    notes: payload.notes
-  };
+    const newHistory: ItemHistory = {
+      id: `hist-${Date.now()}`,
+      containerId,
+      containerName: c.name,
+      itemId: newItem.id,
+      itemName: newItem.name,
+      action: 'added',
+      amount: newItem.quantity,
+      quantityAfter: newItem.quantity,
+      note: 'Initial stock added into container',
+      date: nowStr
+    };
 
-  transactions.unshift(newTxn);
-
-  // Update container status if was 'arrived' or 'unloading'
-  const containerIndex = containers.findIndex(c => c.id === payload.containerId);
-  if (containerIndex !== -1) {
-    if (containers[containerIndex].status === 'expected' || containers[containerIndex].status === 'arrived') {
-      containers[containerIndex].status = 'stored';
-    }
-    containers[containerIndex].updatedAt = now;
-    safeSet(STORAGE_KEYS.CONTAINERS, containers);
-  }
-
-  safeSet(STORAGE_KEYS.ITEMS, items);
-  safeSet(STORAGE_KEYS.TRANSACTIONS, transactions);
-  triggerUpdate();
-
-  return { success: true, message: `Successfully received ${payload.quantityReceived} ${payload.unit}. New balance: ${balanceAfter}.`, transactionId: txnId };
-}
-
-// Stock-Out Dispatch
-export interface StockOutPayload {
-  containerId: string;
-  itemId: string;
-  quantityToDispatch: number;
-  recipient: string; // Customer / Consignee / Store
-  referenceNumber: string; // Dispatch note / Waybill #
-  authorizingOfficer: string;
-  officerRole: UserRole;
-  reason: string;
-  deliveryTruck?: string;
-  notes?: string;
-}
-
-export function recordStockOut(payload: StockOutPayload): { success: boolean; message: string; transactionId?: string } {
-  const items = getContainerItems();
-  const transactions = getTransactions();
-  const containers = getContainers();
-  const now = new Date().toISOString();
-
-  if (payload.quantityToDispatch <= 0) {
-    return { success: false, message: 'Dispatch quantity must be greater than zero.' };
-  }
-
-  const itemIndex = items.findIndex(i => i.id === payload.itemId);
-  if (itemIndex === -1) {
-    return { success: false, message: 'Inventory item not found.' };
-  }
-
-  const item = items[itemIndex];
-
-  // Core safety validation: Prevent over-dispatching!
-  if (payload.quantityToDispatch > item.balance) {
     return {
-      success: false,
-      message: `Cannot dispatch ${payload.quantityToDispatch} ${item.unit}. Only ${item.balance} ${item.unit} available in container ${item.containerNumber}!`
+      ...c,
+      items: [newItem, ...c.items],
+      history: [newHistory, ...c.history],
+      updatedAt: new Date().toISOString()
     };
-  }
+  });
 
-  const balanceBefore = item.balance;
-  item.dispatchedQuantity += payload.quantityToDispatch;
-  item.balance = item.receivedQuantity - item.dispatchedQuantity;
-  const balanceAfter = item.balance;
-  item.lastUpdated = now;
-
-  // Record Stock Transaction
-  const txnId = `txn-${Date.now()}`;
-  const newTxn: StockTransaction = {
-    id: txnId,
-    type: 'stock_out',
-    timestamp: now,
-    containerId: item.containerId,
-    containerNumber: item.containerNumber,
-    shipmentRef: item.shipmentRef,
-    itemId: item.id,
-    itemName: item.itemName,
-    sku: item.sku,
-    unit: item.unit,
-    quantity: payload.quantityToDispatch,
-    balanceBefore,
-    balanceAfter,
-    referenceNumber: payload.referenceNumber || `DSP-${Date.now().toString().slice(-6)}`,
-    recipientOrLocation: payload.recipient,
-    authorizedBy: payload.authorizingOfficer,
-    officerRole: payload.officerRole,
-    reason: payload.reason || 'Authorized Customer Delivery',
-    notes: `${payload.deliveryTruck ? `Carrier/Truck: ${payload.deliveryTruck}. ` : ''}${payload.notes || ''}`
-  };
-
-  transactions.unshift(newTxn);
-
-  // Update container overall status based on remaining items
-  const containerItems = items.filter(i => i.containerId === item.containerId);
-  const totalBalance = containerItems.reduce((acc, curr) => acc + curr.balance, 0);
-  const totalDispatched = containerItems.reduce((acc, curr) => acc + curr.dispatchedQuantity, 0);
-
-  const containerIndex = containers.findIndex(c => c.id === item.containerId);
-  if (containerIndex !== -1) {
-    if (totalBalance === 0 && totalDispatched > 0) {
-      containers[containerIndex].status = 'completed';
-    } else if (totalDispatched > 0) {
-      containers[containerIndex].status = 'partially_dispatched';
-    }
-    containers[containerIndex].updatedAt = now;
-    safeSet(STORAGE_KEYS.CONTAINERS, containers);
-  }
-
-  safeSet(STORAGE_KEYS.ITEMS, items);
-  safeSet(STORAGE_KEYS.TRANSACTIONS, transactions);
-  triggerUpdate();
-
-  return {
-    success: true,
-    message: `Dispatched ${payload.quantityToDispatch} ${item.unit} to ${payload.recipient}. Remaining container balance: ${balanceAfter}.`,
-    transactionId: txnId
-  };
+  saveContainers(containers);
 }
 
-// Stock Transfer
-export interface StockTransferPayload {
-  containerId: string;
-  itemId: string;
-  quantity: number;
-  targetLocation: string; // e.g. "Warehouse Rack B-12"
-  authorizingOfficer: string;
-  officerRole: UserRole;
-  reason: string;
-  notes?: string;
+export function removeItemFromContainer(
+  containerId: string,
+  itemId: string,
+  amount: number,
+  note?: string
+): boolean {
+  if (amount <= 0) return false;
+  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+  let success = false;
+
+  const containers = getContainers().map(c => {
+    if (c.id !== containerId) return c;
+
+    const targetItem = c.items.find(i => i.id === itemId);
+    if (!targetItem) return c;
+
+    const actualAmount = Math.min(amount, targetItem.quantity);
+    const newQty = targetItem.quantity - actualAmount;
+    success = true;
+
+    const updatedItems = c.items.map(i => {
+      if (i.id === itemId) {
+        return {
+          ...i,
+          quantity: newQty,
+          lastUpdated: nowStr
+        };
+      }
+      return i;
+    });
+
+    const newHistory: ItemHistory = {
+      id: `hist-${Date.now()}`,
+      containerId,
+      containerName: c.name,
+      itemId,
+      itemName: targetItem.name,
+      action: 'removed',
+      amount: actualAmount,
+      quantityAfter: newQty,
+      note: note?.trim() || 'Removed from container',
+      date: nowStr
+    };
+
+    return {
+      ...c,
+      items: updatedItems,
+      history: [newHistory, ...c.history],
+      updatedAt: new Date().toISOString()
+    };
+  });
+
+  if (success) {
+    saveContainers(containers);
+  }
+  return success;
 }
 
-export function recordStockTransfer(payload: StockTransferPayload): { success: boolean; message: string } {
-  const items = getContainerItems();
-  const transactions = getTransactions();
-  const now = new Date().toISOString();
+export function addStockToItem(
+  containerId: string,
+  itemId: string,
+  amount: number,
+  note?: string
+): void {
+  if (amount <= 0) return;
+  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
 
-  const itemIndex = items.findIndex(i => i.id === payload.itemId);
-  if (itemIndex === -1) {
-    return { success: false, message: 'Item not found.' };
-  }
+  const containers = getContainers().map(c => {
+    if (c.id !== containerId) return c;
 
-  const item = items[itemIndex];
-  if (payload.quantity > item.balance) {
-    return { success: false, message: `Cannot transfer more than available balance (${item.balance} ${item.unit}).` };
-  }
+    const targetItem = c.items.find(i => i.id === itemId);
+    if (!targetItem) return c;
 
-  const previousLocation = item.storageLocation;
-  item.storageLocation = payload.targetLocation;
-  item.lastUpdated = now;
+    const newQty = targetItem.quantity + amount;
 
-  const txnId = `txn-${Date.now()}`;
-  const newTxn: StockTransaction = {
-    id: txnId,
-    type: 'transfer',
-    timestamp: now,
-    containerId: item.containerId,
-    containerNumber: item.containerNumber,
-    shipmentRef: item.shipmentRef,
-    itemId: item.id,
-    itemName: item.itemName,
-    sku: item.sku,
-    unit: item.unit,
-    quantity: payload.quantity,
-    balanceBefore: item.balance,
-    balanceAfter: item.balance,
-    referenceNumber: `TRF-${Date.now().toString().slice(-6)}`,
-    recipientOrLocation: payload.targetLocation,
-    authorizedBy: payload.authorizingOfficer,
-    officerRole: payload.officerRole,
-    reason: payload.reason || `Relocated from ${previousLocation} to ${payload.targetLocation}`,
-    notes: payload.notes
-  };
+    const updatedItems = c.items.map(i => {
+      if (i.id === itemId) {
+        return {
+          ...i,
+          quantity: newQty,
+          lastUpdated: nowStr
+        };
+      }
+      return i;
+    });
 
-  transactions.unshift(newTxn);
-  safeSet(STORAGE_KEYS.ITEMS, items);
-  safeSet(STORAGE_KEYS.TRANSACTIONS, transactions);
-  triggerUpdate();
+    const newHistory: ItemHistory = {
+      id: `hist-${Date.now()}`,
+      containerId,
+      containerName: c.name,
+      itemId,
+      itemName: targetItem.name,
+      action: 'added',
+      amount,
+      quantityAfter: newQty,
+      note: note?.trim() || 'Added more stock into container',
+      date: nowStr
+    };
 
-  return { success: true, message: `Transferred ${payload.quantity} ${item.unit} to ${payload.targetLocation}.` };
+    return {
+      ...c,
+      items: updatedItems,
+      history: [newHistory, ...c.history],
+      updatedAt: new Date().toISOString()
+    };
+  });
+
+  saveContainers(containers);
 }
 
-// Stock Adjustment (Role restricted: Manager or Admin)
-export interface StockAdjustmentPayload {
-  containerId: string;
-  itemId: string;
-  newBalance: number;
-  reason: string;
-  authorizingOfficer: string;
-  officerRole: UserRole;
-  notes?: string;
+export function deleteItem(containerId: string, itemId: string): void {
+  const containers = getContainers().map(c => {
+    if (c.id !== containerId) return c;
+    return {
+      ...c,
+      items: c.items.filter(i => i.id !== itemId),
+      updatedAt: new Date().toISOString()
+    };
+  });
+  saveContainers(containers);
 }
 
-export function recordStockAdjustment(payload: StockAdjustmentPayload): { success: boolean; message: string } {
-  if (payload.officerRole !== 'admin' && payload.officerRole !== 'warehouse_manager') {
-    return { success: false, message: 'Permission Denied: Stock adjustments require Warehouse Manager or Admin authorization.' };
-  }
+export function resetToDemoData(): void {
+  saveContainers(INITIAL_CONTAINERS);
+}
 
-  const items = getContainerItems();
-  const transactions = getTransactions();
-  const now = new Date().toISOString();
-
-  const itemIndex = items.findIndex(i => i.id === payload.itemId);
-  if (itemIndex === -1) {
-    return { success: false, message: 'Item not found.' };
-  }
-
-  const item = items[itemIndex];
-  const balanceBefore = item.balance;
-  const balanceAfter = payload.newBalance;
-  const delta = balanceAfter - balanceBefore;
-
-  if (delta === 0) {
-    return { success: false, message: 'New quantity matches existing balance. No adjustment required.' };
-  }
-
-  // Adjust received or balance directly
-  item.balance = balanceAfter;
-  // If positive adjustment, increase receivedQuantity
-  if (delta > 0) {
-    item.receivedQuantity += delta;
-  } else {
-    // If negative, record as discrepancy adjustment
-  }
-  item.lastUpdated = now;
-
-  const txnId = `txn-${Date.now()}`;
-  const newTxn: StockTransaction = {
-    id: txnId,
-    type: 'adjustment',
-    timestamp: now,
-    containerId: item.containerId,
-    containerNumber: item.containerNumber,
-    shipmentRef: item.shipmentRef,
-    itemId: item.id,
-    itemName: item.itemName,
-    sku: item.sku,
-    unit: item.unit,
-    quantity: delta,
-    balanceBefore,
-    balanceAfter,
-    referenceNumber: `ADJ-${Date.now().toString().slice(-6)}`,
-    recipientOrLocation: 'Warehouse Inventory Reconciliation',
-    authorizedBy: payload.authorizingOfficer,
-    officerRole: payload.officerRole,
-    reason: payload.reason,
-    notes: payload.notes
-  };
-
-  transactions.unshift(newTxn);
-  safeSet(STORAGE_KEYS.ITEMS, items);
-  safeSet(STORAGE_KEYS.TRANSACTIONS, transactions);
-  triggerUpdate();
-
-  return {
-    success: true,
-    message: `Adjusted balance from ${balanceBefore} to ${balanceAfter} (${delta > 0 ? '+' : ''}${delta} ${item.unit}). Audit log preserved.`
-  };
+export function clearAllContainers(): void {
+  saveContainers([]);
 }
