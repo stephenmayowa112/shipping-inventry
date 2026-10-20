@@ -93,6 +93,12 @@ export function ContainerList({
                             <span>{container.note}</span>
                           </p>
                         )}
+                        <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
+                          <span>Created by: <strong className="text-slate-700 font-semibold">{container.createdBy || 'Staff'}</strong></span>
+                          {container.updatedBy && (
+                            <span>• Updated by: <strong className="text-slate-700 font-semibold">{container.updatedBy}</strong></span>
+                          )}
+                        </p>
                       </div>
                     </div>
 

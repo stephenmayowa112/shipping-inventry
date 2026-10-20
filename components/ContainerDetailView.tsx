@@ -5,7 +5,6 @@ import { Container, ContainerItem } from '@/lib/types';
 import { 
   ArrowLeft, 
   Plus, 
-  Minus, 
   FileSpreadsheet, 
   FileText, 
   Trash2, 
@@ -14,10 +13,11 @@ import {
   Clock, 
   ArrowDownRight,
   Package,
-  Edit2
+  Edit2,
+  User
 } from 'lucide-react';
 import { exportSingleContainerToExcel, exportSingleContainerToPdf } from '@/lib/exportUtils';
-import { removeItemFromContainer, addStockToItem, deleteItem, updateContainer } from '@/lib/storage';
+import { deleteItem, updateContainer, getLastOperatorName } from '@/lib/storage';
 import { AddItemModal } from './AddItemModal';
 import { RemoveItemModal } from './RemoveItemModal';
 import { AddStockModal } from './AddStockModal';
@@ -40,6 +40,7 @@ export function ContainerDetailView({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editName, setEditName] = useState(container.name);
   const [editNote, setEditNote] = useState(container.note || '');
+  const [editPersonName, setEditPersonName] = useState('');
 
   // Quick feedback banner state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -50,19 +51,6 @@ export function ContainerDetailView({
   };
 
   const totalGoods = container.items.reduce((sum, item) => sum + item.quantity, 0);
-
-  // Quick 1-tap decrement
-  const handleQuickDecrement = (item: ContainerItem) => {
-    if (item.quantity <= 0) return;
-    removeItemFromContainer(container.id, item.id, 1, 'Quick 1-item take out');
-    showToast(`Removed 1 ${item.unit} of "${item.name}". ${item.quantity - 1} left.`);
-  };
-
-  // Quick 1-tap increment
-  const handleQuickIncrement = (item: ContainerItem) => {
-    addStockToItem(container.id, item.id, 1, 'Quick 1-item stock add');
-    showToast(`Added 1 ${item.unit} to "${item.name}". ${item.quantity + 1} total.`);
-  };
 
   // Delete item
   const handleDeleteItem = (item: ContainerItem) => {
@@ -75,11 +63,13 @@ export function ContainerDetailView({
   // Save container name edit
   const handleSaveTitle = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editName.trim()) return;
-    updateContainer(container.id, editName, editNote);
+    if (!editName.trim() || !editPersonName.trim()) return;
+    updateContainer(container.id, editName, editPersonName, editNote);
     setIsEditingTitle(false);
-    showToast('Container details updated.');
+    showToast(`Container updated by ${editPersonName.trim()}.`);
   };
+
+  const isTitleEditValid = editName.trim().length > 0 && editPersonName.trim().length > 0;
 
   return (
     <div className="space-y-6 pb-12">
@@ -112,12 +102,24 @@ export function ContainerDetailView({
       <div className="p-5 sm:p-6 bg-white border border-slate-200 rounded-2xl shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           
-          <div>
+          <div className="flex-1">
             {!isEditingTitle ? (
               <div>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200 inline-block mb-1">
-                  Deep Down Logistics
-                </span>
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                    Deep Down Logistics
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+                    <User className="w-3 h-3 text-slate-400" />
+                    <span>Created by: <strong className="text-slate-700 font-semibold">{container.createdBy || 'Staff'}</strong></span>
+                  </span>
+                  {container.updatedBy && (
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      • Updated by: <strong className="text-slate-700 font-semibold">{container.updatedBy}</strong>
+                    </span>
+                  )}
+                </div>
+
                 <div className="flex items-center space-x-2">
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                     {container.name}
@@ -126,14 +128,16 @@ export function ContainerDetailView({
                     onClick={() => {
                       setEditName(container.name);
                       setEditNote(container.note || '');
+                      setEditPersonName(getLastOperatorName() || container.updatedBy || '');
                       setIsEditingTitle(true);
                     }}
-                    title="Edit container name or note"
+                    title="Edit container name, note, or updater"
                     className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
+
                 {container.note && (
                   <p className="text-xs sm:text-sm text-slate-500 flex items-center gap-1.5 mt-1">
                     <MapPin className="w-4 h-4 text-slate-400" />
@@ -142,32 +146,69 @@ export function ContainerDetailView({
                 )}
               </div>
             ) : (
-              <form onSubmit={handleSaveTitle} className="space-y-2 max-w-md">
-                <input
-                  type="text"
-                  required
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full text-base sm:text-lg font-bold bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900"
-                />
-                <input
-                  type="text"
-                  value={editNote}
-                  onChange={(e) => setEditNote(e.target.value)}
-                  placeholder="Optional location or note"
-                  className="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg px-3 py-1 text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900"
-                />
+              <form onSubmit={handleSaveTitle} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 max-w-lg">
+                <span className="text-xs font-bold text-slate-900 block">
+                  Update Container Information
+                </span>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    Container Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full text-sm sm:text-base font-bold bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
+                      <User className="w-3 h-3 text-slate-500" />
+                      <span>Your Name (Person Updating) *</span>
+                    </label>
+                    <span className="text-[9px] font-bold uppercase text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                      Compulsory
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={editPersonName}
+                    onChange={(e) => setEditPersonName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="w-full text-xs sm:text-sm font-medium bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    Location or Note (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={editNote}
+                    onChange={(e) => setEditNote(e.target.value)}
+                    placeholder="Optional location or note"
+                    className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-slate-900"
+                  />
+                </div>
+
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     type="submit"
-                    className="px-3 py-1 rounded-md bg-slate-900 text-white text-xs font-bold"
+                    disabled={!isTitleEditValid}
+                    className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-bold transition-colors"
                   >
-                    Save
+                    Save Changes
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsEditingTitle(false)}
-                    className="px-3 py-1 rounded-md bg-slate-100 text-slate-600 text-xs"
+                    className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs hover:bg-slate-100 transition-colors"
                   >
                     Cancel
                   </button>
@@ -222,80 +263,70 @@ export function ContainerDetailView({
             {container.items.length} Distinct Products
           </span>
         </div>
+
       </div>
 
-      {/* Main Items Section */}
-      <div className="space-y-4">
+      {/* Goods Inside Container */}
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
             <Package className="w-5 h-5 text-slate-700" />
-            <span>Items Inside {container.name}</span>
+            <span>Items Inside Container</span>
           </h2>
           <span className="text-xs text-slate-500">
-            Click <strong>Take Out</strong> when you remove an item
+            Click <strong>Take Out</strong> when goods are removed from container
           </span>
         </div>
 
         {container.items.length === 0 ? (
-          /* Empty container */
-          <div className="text-center py-12 px-4 bg-white border border-dashed border-slate-300 rounded-2xl">
-            <Package className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <h3 className="text-base font-bold text-slate-800">No goods inside this container yet</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
-              Add the goods currently packed in this container to know your exact count.
+          <div className="p-8 bg-white border border-dashed border-slate-300 rounded-2xl text-center space-y-3">
+            <p className="text-sm text-slate-500">
+              This container is currently empty.
             </p>
             <button
               onClick={() => setIsAddItemOpen(true)}
-              className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs sm:text-sm"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs"
             >
-              + Add First Item
+              <Plus className="w-4 h-4" />
+              <span>Add First Item</span>
             </button>
           </div>
         ) : (
-          /* Items List */
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3">
             {container.items.map((item) => (
               <div
                 key={item.id}
-                className="p-4 sm:p-5 bg-white border border-slate-200 hover:border-slate-300 rounded-2xl shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="p-4 sm:p-5 bg-white border border-slate-200 hover:border-slate-300 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
               >
                 {/* Item Details */}
-                <div className="flex-1">
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                    {item.name}
-                  </h3>
-                  <div className="flex items-center space-x-3 text-xs text-slate-400 mt-1">
-                    <span>Added: {item.addedDate}</span>
-                    <span>•</span>
-                    <span>Updated: {item.lastUpdated}</span>
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-2xl sm:text-3xl font-black font-mono text-slate-900">
+                      {item.quantity}
+                    </span>
+                    <div>
+                      <h3 className="font-bold text-base sm:text-lg text-slate-900 leading-tight">
+                        {item.name}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Unit: <span className="font-semibold text-slate-700">{item.unit}</span>
+                        {item.addedBy && (
+                          <span className="ml-2">
+                            • Stocked by: <span className="font-semibold text-slate-700">{item.addedBy}</span>
+                          </span>
+                        )}
+                        <span className="ml-2 text-slate-400">
+                          (Updated: {item.lastUpdated})
+                        </span>
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Big Quantity Display */}
-                <div className="flex items-baseline space-x-2 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 sm:self-center">
-                  <span className={`text-2xl sm:text-3xl font-black font-mono ${item.quantity > 0 ? 'text-slate-900' : 'text-rose-600'}`}>
-                    {item.quantity}
-                  </span>
-                  <span className="text-xs font-semibold text-slate-500">
-                    {item.unit} left
-                  </span>
-                </div>
-
-                {/* Action Controls */}
-                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                {/* Remove & Add Actions */}
+                <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
                   
-                  {/* Quick 1-tap [- 1] */}
-                  <button
-                    onClick={() => handleQuickDecrement(item)}
-                    disabled={item.quantity <= 0}
-                    title="Quickly take out 1"
-                    className="p-2 sm:px-2.5 sm:py-2 rounded-lg bg-slate-100 hover:bg-amber-100 border border-slate-200 text-amber-900 font-bold text-xs disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Minus className="w-4 h-4 inline" />
-                    <span className="hidden sm:inline ml-0.5">1</span>
-                  </button>
-
-                  {/* Main Take Out Button */}
+                  {/* Take Out Goods Button */}
                   <button
                     onClick={() => setSelectedRemoveItem(item)}
                     disabled={item.quantity <= 0}
@@ -304,22 +335,12 @@ export function ContainerDetailView({
                     - Take Out Goods
                   </button>
 
-                  {/* Quick 1-tap [+ 1] */}
-                  <button
-                    onClick={() => handleQuickIncrement(item)}
-                    title="Quickly add 1"
-                    className="p-2 sm:px-2.5 sm:py-2 rounded-lg bg-slate-100 hover:bg-emerald-100 border border-slate-200 text-emerald-900 font-bold text-xs transition-colors"
-                  >
-                    <Plus className="w-4 h-4 inline" />
-                    <span className="hidden sm:inline ml-0.5">1</span>
-                  </button>
-
                   {/* Add More Stock Button */}
                   <button
                     onClick={() => setSelectedAddStockItem(item)}
-                    className="px-3 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 font-semibold text-xs sm:text-sm transition-colors"
+                    className="px-3.5 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 font-bold text-xs sm:text-sm transition-colors"
                   >
-                    + Add More
+                    + Add Stock
                   </button>
 
                   {/* Delete Item */}
@@ -344,10 +365,10 @@ export function ContainerDetailView({
         <div className="flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
             <Clock className="w-5 h-5 text-slate-700" />
-            <span>Goods Taken Out & Movement History</span>
+            <span>Goods Taken Out & Update History</span>
           </h2>
           <span className="text-xs text-slate-400">
-            {container.history.length} records logged
+            {container.history.length} audit records
           </span>
         </div>
 
@@ -359,6 +380,7 @@ export function ContainerDetailView({
           <div className="bg-white border border-slate-200 rounded-2xl shadow-xs divide-y divide-slate-100 overflow-hidden">
             {container.history.slice(0, 15).map((record) => {
               const isRemoved = record.action === 'removed';
+              const isUpdated = record.action === 'updated';
 
               return (
                 <div key={record.id} className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
@@ -366,20 +388,38 @@ export function ContainerDetailView({
                     <div className={`p-1.5 rounded-lg border shrink-0 mt-0.5 ${
                       isRemoved 
                         ? 'bg-amber-50 border-amber-200 text-amber-700' 
+                        : isUpdated
+                        ? 'bg-blue-50 border-blue-200 text-blue-700'
                         : 'bg-emerald-50 border-emerald-200 text-emerald-700'
                     }`}>
-                      {isRemoved ? <ArrowDownRight className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                      {isRemoved ? (
+                        <ArrowDownRight className="w-4 h-4" />
+                      ) : isUpdated ? (
+                        <Edit2 className="w-4 h-4" />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )}
                     </div>
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${
-                          isRemoved ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'
+                          isRemoved 
+                            ? 'bg-amber-100 text-amber-900' 
+                            : isUpdated
+                            ? 'bg-blue-100 text-blue-900'
+                            : 'bg-emerald-100 text-emerald-900'
                         }`}>
-                          {isRemoved ? 'Took Out' : 'Added'}
+                          {isRemoved ? 'Took Out' : isUpdated ? 'Updated' : 'Added Stock'}
                         </span>
                         <strong className="text-slate-900 text-sm font-semibold">{record.itemName}</strong>
-                        <span className="font-mono font-bold text-slate-800">
-                          ({isRemoved ? `-${record.amount}` : `+${record.amount}`})
+                        {record.amount > 0 && (
+                          <span className="font-mono font-bold text-slate-800">
+                            ({isRemoved ? `-${record.amount}` : `+${record.amount}`})
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                          <User className="w-3 h-3 text-slate-500" />
+                          <span>By: {record.personName}</span>
                         </span>
                       </div>
                       {record.note && (
@@ -392,7 +432,7 @@ export function ContainerDetailView({
 
                   <div className="flex sm:flex-col items-center sm:items-end justify-between text-slate-500 text-[11px] sm:text-right shrink-0">
                     <span className="font-mono font-semibold text-slate-800">
-                      Remaining Left: {record.quantityAfter}
+                      Balance: {record.quantityAfter}
                     </span>
                     <span>{record.date}</span>
                   </div>

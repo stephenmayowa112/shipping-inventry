@@ -17,8 +17,10 @@ export function exportSingleContainerToExcel(container: Container): void {
     'Item Name': item.name,
     'Current Quantity Left': item.quantity,
     'Unit': item.unit,
+    'Added By': item.addedBy || 'Staff',
     'Date Added': item.addedDate,
-    'Last Updated': item.lastUpdated
+    'Last Updated': item.lastUpdated,
+    'Last Updated By': item.lastUpdatedBy || item.addedBy || 'Staff'
   }));
 
   const totalGoods = container.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -32,8 +34,10 @@ export function exportSingleContainerToExcel(container: Container): void {
       'Item Name': 'TOTAL GOODS IN CONTAINER',
       'Current Quantity Left': totalGoods,
       'Unit': 'items',
+      'Added By': '',
       'Date Added': '',
-      'Last Updated': ''
+      'Last Updated': '',
+      'Last Updated By': ''
     });
   }
 
@@ -46,14 +50,15 @@ export function exportSingleContainerToExcel(container: Container): void {
       '#': index + 1,
       'Company': 'Deep Down Logistics',
       'Date & Time': h.date,
-      'Action': h.action === 'removed' ? 'REMOVED / TOOK OUT' : 'ADDED STOCK',
+      'Action': h.action === 'removed' ? 'REMOVED / TOOK OUT' : h.action === 'updated' ? 'CONTAINER UPDATED' : 'ADDED STOCK',
       'Item Name': h.itemName,
       'Amount': h.amount,
       'Remaining Balance': h.quantityAfter,
+      'Person (Updated/Created By)': h.personName || 'Staff',
       'Note / Reason': h.note || ''
     }));
     const wsHistory = XLSX.utils.json_to_sheet(historyData);
-    XLSX.utils.book_append_sheet(wb, wsHistory, 'Removal & Addition Log');
+    XLSX.utils.book_append_sheet(wb, wsHistory, 'Removal & Update Log');
   }
 
   const cleanName = container.name.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -73,10 +78,13 @@ export function exportAllContainersToExcel(containers: Container[]): void {
       '#': idx + 1,
       'Company': 'Deep Down Logistics',
       'Container Name': c.name,
-      'Note / Location': c.note || '—',
+      'Location / Note': c.note || '—',
+      'Created By': c.createdBy || 'Staff',
+      'Last Updated By': c.updatedBy || 'Staff',
       'Different Products': totalItemsCount,
       'Total Goods Left': totalGoodsCount,
-      'Date Created': c.createdAt ? c.createdAt.slice(0, 10) : '—'
+      'Date Created': c.createdAt ? c.createdAt.slice(0, 10) : '—',
+      'Last Updated': c.updatedAt ? c.updatedAt.slice(0, 10) : '—'
     };
   });
   const wsSummary = XLSX.utils.json_to_sheet(summaryData);
@@ -92,6 +100,7 @@ export function exportAllContainersToExcel(containers: Container[]): void {
         'Item Name': item.name,
         'Current Quantity Left': item.quantity,
         'Unit': item.unit,
+        'Stocked By': item.addedBy || 'Staff',
         'Last Updated': item.lastUpdated
       });
     });
@@ -107,17 +116,18 @@ export function exportAllContainersToExcel(containers: Container[]): void {
         'Company': 'Deep Down Logistics',
         'Date & Time': h.date,
         'Container': c.name,
-        'Action': h.action === 'removed' ? 'REMOVED / TOOK OUT' : 'ADDED STOCK',
+        'Action': h.action === 'removed' ? 'REMOVED / TOOK OUT' : h.action === 'updated' ? 'CONTAINER UPDATED' : 'ADDED STOCK',
         'Item Name': h.itemName,
         'Amount': h.amount,
         'Remaining Left': h.quantityAfter,
+        'Person (Updated/Created By)': h.personName || 'Staff',
         'Note / Reason': h.note || ''
       });
     });
   });
   if (allHistoryData.length > 0) {
     const wsHistory = XLSX.utils.json_to_sheet(allHistoryData);
-    XLSX.utils.book_append_sheet(wb, wsHistory, 'Removal History');
+    XLSX.utils.book_append_sheet(wb, wsHistory, 'Removal & Update History');
   }
 
   XLSX.writeFile(wb, `Deep_Down_Logistics_All_Containers_${dateStr}.xlsx`);
@@ -140,7 +150,7 @@ export function exportSingleContainerToPdf(container: Container): void {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(203, 213, 225); // slate-300
-  doc.text('Container Inventory & Current Goods Sheet', 18, 26);
+  doc.text('Container Inventory & Goods Verification Sheet', 18, 26);
 
   y = 37;
   doc.setFont('helvetica', 'bold');
@@ -158,12 +168,17 @@ export function exportSingleContainerToPdf(container: Container): void {
 
   const totalGoods = container.items.reduce((sum, item) => sum + item.quantity, 0);
 
-  y += 7;
-  doc.setFontSize(9);
-  doc.setTextColor(100, 116, 139);
-  doc.text(`Date Printed: ${new Date().toLocaleString()}  |  Total Goods Inside: ${totalGoods}`, 14, y);
-
   y += 6;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Created By: ${container.createdBy || 'Staff'}   |   Last Updated By: ${container.updatedBy || 'Staff'}`, 14, y);
+
+  y += 5.5;
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Date Printed: ${new Date().toLocaleString()}   |   Total Goods Inside: ${totalGoods}`, 14, y);
+
+  y += 5;
   doc.setDrawColor(226, 232, 240);
   doc.line(14, y, 196, y);
 
@@ -181,9 +196,10 @@ export function exportSingleContainerToPdf(container: Container): void {
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
   doc.text('#', 18, y + 5.5);
-  doc.text('ITEM NAME', 30, y + 5.5);
-  doc.text('QUANTITY LEFT', 125, y + 5.5);
-  doc.text('UNIT', 165, y + 5.5);
+  doc.text('ITEM NAME', 28, y + 5.5);
+  doc.text('QUANTITY LEFT', 115, y + 5.5);
+  doc.text('UNIT', 148, y + 5.5);
+  doc.text('STOCKED BY', 168, y + 5.5);
 
   y += 8;
   doc.setFont('helvetica', 'normal');
@@ -205,11 +221,12 @@ export function exportSingleContainerToPdf(container: Container): void {
       }
       doc.setTextColor(30, 41, 59);
       doc.text((index + 1).toString(), 18, y + 5);
-      doc.text(item.name.substring(0, 45), 30, y + 5);
+      doc.text(item.name.substring(0, 38), 28, y + 5);
       doc.setFont('helvetica', 'bold');
-      doc.text(item.quantity.toString(), 125, y + 5);
+      doc.text(item.quantity.toString(), 115, y + 5);
       doc.setFont('helvetica', 'normal');
-      doc.text(item.unit, 165, y + 5);
+      doc.text(item.unit, 148, y + 5);
+      doc.text((item.addedBy || 'Staff').substring(0, 14), 168, y + 5);
       y += 7;
     });
 
@@ -218,15 +235,15 @@ export function exportSingleContainerToPdf(container: Container): void {
     doc.rect(14, y, 182, 7.5, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text('TOTAL GOODS REMAINING:', 30, y + 5.2);
-    doc.text(totalGoods.toString(), 125, y + 5.2);
-    doc.text('items', 165, y + 5.2);
+    doc.text('TOTAL GOODS REMAINING:', 28, y + 5.2);
+    doc.text(totalGoods.toString(), 115, y + 5.2);
+    doc.text('items', 148, y + 5.2);
     y += 12;
   }
 
   // Removals & Additions Log
   if (container.history && container.history.length > 0) {
-    if (y > 230) {
+    if (y > 225) {
       doc.addPage();
       y = 20;
     }
@@ -239,20 +256,21 @@ export function exportSingleContainerToPdf(container: Container): void {
     y += 5;
     doc.setFillColor(241, 245, 249);
     doc.rect(14, y, 182, 8, 'F');
-    doc.setFontSize(8.5);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text('DATE', 18, y + 5.5);
-    doc.text('ACTION', 55, y + 5.5);
-    doc.text('ITEM', 85, y + 5.5);
-    doc.text('QTY', 140, y + 5.5);
-    doc.text('LEFT', 158, y + 5.5);
+    doc.text('DATE', 17, y + 5.5);
+    doc.text('ACTION', 50, y + 5.5);
+    doc.text('ITEM', 82, y + 5.5);
+    doc.text('QTY', 125, y + 5.5);
+    doc.text('LEFT', 140, y + 5.5);
+    doc.text('PERSON (BY)', 158, y + 5.5);
 
     y += 8;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
 
-    container.history.slice(0, 15).forEach((h, idx) => {
+    container.history.slice(0, 18).forEach((h, idx) => {
       if (y > 275) {
         doc.addPage();
         y = 20;
@@ -262,11 +280,12 @@ export function exportSingleContainerToPdf(container: Container): void {
         doc.rect(14, y, 182, 6.5, 'F');
       }
       doc.setTextColor(51, 65, 85);
-      doc.text(h.date, 18, y + 4.5);
-      doc.text(h.action === 'removed' ? 'Removed (-)' : 'Added (+)', 55, y + 4.5);
-      doc.text(h.itemName.substring(0, 26), 85, y + 4.5);
-      doc.text(h.amount.toString(), 140, y + 4.5);
-      doc.text(h.quantityAfter.toString(), 158, y + 4.5);
+      doc.text(h.date, 17, y + 4.5);
+      doc.text(h.action === 'removed' ? 'Removed (-)' : h.action === 'updated' ? 'Updated' : 'Added (+)', 50, y + 4.5);
+      doc.text(h.itemName.substring(0, 22), 82, y + 4.5);
+      doc.text(h.amount > 0 ? h.amount.toString() : '—', 125, y + 4.5);
+      doc.text(h.quantityAfter.toString(), 140, y + 4.5);
+      doc.text((h.personName || 'Staff').substring(0, 16), 158, y + 4.5);
       y += 6.5;
     });
   }
@@ -274,7 +293,7 @@ export function exportSingleContainerToPdf(container: Container): void {
   // Footer note
   doc.setFontSize(8);
   doc.setTextColor(148, 163, 184);
-  doc.text('Deep Down Logistics — Container Inventory System', 14, 288);
+  doc.text('Deep Down Logistics — Container Inventory System with Person Verification', 14, 288);
 
   const cleanName = container.name.replace(/[^a-zA-Z0-9_-]/g, '_');
   doc.save(`Deep_Down_Logistics_${cleanName}_Inventory.pdf`);
@@ -308,7 +327,7 @@ export function exportAllContainersToPdf(containers: Container[]): void {
   y += 7;
 
   containers.forEach((c) => {
-    if (y > 240) {
+    if (y > 235) {
       doc.addPage();
       y = 20;
     }
@@ -316,13 +335,17 @@ export function exportAllContainersToPdf(containers: Container[]): void {
     const totalGoods = c.items.reduce((sum, item) => sum + item.quantity, 0);
 
     doc.setFillColor(241, 245, 249);
-    doc.rect(14, y, 182, 8, 'F');
+    doc.rect(14, y, 182, 9, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(10.5);
     doc.setTextColor(15, 23, 42);
-    doc.text(`${c.name} (${totalGoods} items inside)`, 18, y + 5.5);
+    doc.text(`${c.name} (${totalGoods} items inside)`, 18, y + 6);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Created by: ${c.createdBy || 'Staff'} | Updated by: ${c.updatedBy || 'Staff'}`, 110, y + 6);
 
-    y += 10;
+    y += 11;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
 

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Package, Plus } from 'lucide-react';
-import { addContainer } from '@/lib/storage';
+import { X, Package, User, Plus } from 'lucide-react';
+import { addContainer, getLastOperatorName } from '@/lib/storage';
 
 interface AddContainerModalProps {
   isOpen: boolean;
@@ -16,20 +16,23 @@ export function AddContainerModal({
   onContainerCreated
 }: AddContainerModalProps) {
   const [name, setName] = useState('');
+  const [personName, setPersonName] = useState(() => getLastOperatorName());
   const [note, setNote] = useState('');
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !personName.trim()) return;
 
-    const newContainer = addContainer(name, note);
+    const newContainer = addContainer(name, personName, note);
     setName('');
     setNote('');
     onClose();
     onContainerCreated(newContainer.id);
   };
+
+  const isFormValid = name.trim().length > 0 && personName.trim().length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
@@ -43,7 +46,10 @@ export function AddContainerModal({
             <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center">
               <Package className="w-4 h-4" />
             </div>
-            <h3 className="text-base font-bold text-slate-900">Add New Container</h3>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Add New Container</h3>
+              <p className="text-[11px] text-slate-500">Deep Down Logistics Inventory</p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -55,6 +61,8 @@ export function AddContainerModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          
+          {/* Container Name */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
               Container Name *
@@ -65,14 +73,39 @@ export function AddContainerModal({
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Container 1, Blue Yard Container, Batch A"
+              placeholder="e.g. Container 1, Blue 40ft Yard Container, Bay A"
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
             />
             <p className="text-[11px] text-slate-400 mt-1">
-              Give it a simple name so you can identify it easily.
+              Give the container a recognizable name.
             </p>
           </div>
 
+          {/* Compulsory Person Name */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1">
+                <User className="w-3.5 h-3.5 text-slate-600" />
+                <span>Your Name (Person Creating Container) *</span>
+              </label>
+              <span className="text-[10px] uppercase font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                Compulsory
+              </span>
+            </div>
+            <input
+              type="text"
+              required
+              value={personName}
+              onChange={(e) => setPersonName(e.target.value)}
+              placeholder="e.g. John Doe, Michael, Stephen"
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+            />
+            <p className="text-[11px] text-slate-500 mt-1">
+              Recorded in the log so everyone knows who registered this container.
+            </p>
+          </div>
+
+          {/* Location or Note */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
               Location or Note (Optional)
@@ -81,7 +114,7 @@ export function AddContainerModal({
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. Front yard, Behind shop, Warehouse Bay 2"
+              placeholder="e.g. Front yard, Behind warehouse, Bay 2"
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
             />
           </div>
@@ -96,7 +129,7 @@ export function AddContainerModal({
             </button>
             <button
               type="submit"
-              disabled={!name.trim()}
+              disabled={!isFormValid}
               className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-xs transition-colors"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
