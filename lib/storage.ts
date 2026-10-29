@@ -1,15 +1,23 @@
 'use client';
 
-import { Container, ContainerItem, ItemHistory } from './types';
+import { Container, ContainerItem, ItemHistory, TakenStatus } from './types';
 
-const STORAGE_KEY = 'deep_down_containers_v3';
+const STORAGE_KEY = 'deep_down_containers_v4';
 const OPERATOR_KEY = 'deep_down_operator_name';
 export const STORAGE_UPDATE_EVENT = 'deep_down_containers_updated';
+
+export function formatMoney(val: number): string {
+  const num = Number(val) || 0;
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
 
 export function getLastOperatorName(): string {
   if (typeof window === 'undefined') return '';
   try {
-    return localStorage.getItem(OPERATOR_KEY) || '';
+    return window.localStorage.getItem(OPERATOR_KEY) || '';
   } catch {
     return '';
   }
@@ -17,222 +25,261 @@ export function getLastOperatorName(): string {
 
 export function saveLastOperatorName(name: string): void {
   if (typeof window === 'undefined') return;
+  const trimmed = name.trim();
+  if (!trimmed) return;
   try {
-    if (name.trim()) {
-      localStorage.setItem(OPERATOR_KEY, name.trim());
-    }
-  } catch {}
+    window.localStorage.setItem(OPERATOR_KEY, trimmed);
+  } catch {
+    // Ignore storage errors
+  }
 }
 
 export const INITIAL_CONTAINERS: Container[] = [
   {
     id: 'cnt-1',
-    name: 'Container 1 (Yard Front)',
-    note: 'Foodstuff & Wholesale Grocery',
-    createdBy: 'David Adeleke',
+    name: 'Container 1 (MSKU-904821 - 40ft)',
+    warehouse: 'Warehouse A - Main Yard',
+    note: 'Arrived Monday morning — General Merchandise & Electronics',
+    createdBy: 'Stephen Mayowa',
     updatedBy: 'Stephen Mayowa',
-    createdAt: '2026-10-15T09:00:00Z',
-    updatedAt: '2026-10-19T14:30:00Z',
+    createdAt: '2026-10-20T08:00:00Z',
+    updatedAt: '2026-10-28T14:30:00Z',
     items: [
       {
         id: 'itm-101',
         containerId: 'cnt-1',
-        name: 'Cooking Oil (5 Litre Cans)',
-        quantity: 45,
-        unit: 'cans',
-        addedDate: '2026-10-15',
-        lastUpdated: '2026-10-19 14:30',
-        addedBy: 'David Adeleke',
-        lastUpdatedBy: 'Stephen Mayowa'
+        containerName: 'Container 1 (MSKU-904821 - 40ft)',
+        name: 'Alhaji Musa Ibrahim',
+        phone: '0803 452 8910',
+        cbm: 14.5,
+        amount: 1450000,
+        takenStatus: 'Taken',
+        taken: 'All 45 Cartons Taken',
+        paid: 1450000,
+        credit: 0,
+        receiverName: 'Suleiman Musa',
+        receiverPhone: '0806 112 3344',
+        receiverDate: '2026-10-27',
+        warehouse: 'Warehouse A - Main Yard',
+        addedDate: '2026-10-20',
+        lastUpdated: '2026-10-27 15:20',
+        addedBy: 'Stephen Mayowa',
+        lastUpdatedBy: 'Stephen Mayowa',
       },
       {
         id: 'itm-102',
         containerId: 'cnt-1',
-        name: 'Rice (50kg Royal Bags)',
-        quantity: 80,
-        unit: 'bags',
-        addedDate: '2026-10-15',
-        lastUpdated: '2026-10-18 10:15',
-        addedBy: 'David Adeleke',
-        lastUpdatedBy: 'Michael Obi'
+        containerName: 'Container 1 (MSKU-904821 - 40ft)',
+        name: 'Chinedu Okafor Ventures',
+        phone: '0802 998 1122',
+        cbm: 8.2,
+        amount: 820000,
+        takenStatus: 'Partial',
+        taken: '12 of 30 Boxes Taken (18 Left)',
+        paid: 500000,
+        credit: 320000,
+        receiverName: 'Emeka Okafor',
+        receiverPhone: '0813 400 7788',
+        receiverDate: '2026-10-28',
+        warehouse: 'Warehouse A - Main Yard',
+        addedDate: '2026-10-20',
+        lastUpdated: '2026-10-28 11:45',
+        addedBy: 'Stephen Mayowa',
+        lastUpdatedBy: 'Michael Ade',
       },
       {
         id: 'itm-103',
         containerId: 'cnt-1',
-        name: 'Tomato Paste (Cartons)',
-        quantity: 60,
-        unit: 'cartons',
-        addedDate: '2026-10-15',
-        lastUpdated: '2026-10-17 16:00',
-        addedBy: 'David Adeleke',
-        lastUpdatedBy: 'David Adeleke'
+        containerName: 'Container 1 (MSKU-904821 - 40ft)',
+        name: 'Mrs. Folake Adeyemi',
+        phone: '0706 554 3219',
+        cbm: 5.0,
+        amount: 500000,
+        takenStatus: 'Not Taken',
+        taken: 'Not Taken (20 Bales in Warehouse)',
+        paid: 200000,
+        credit: 300000,
+        receiverName: '',
+        receiverPhone: '',
+        receiverDate: '',
+        warehouse: 'Warehouse A - Main Yard',
+        addedDate: '2026-10-21',
+        lastUpdated: '2026-10-21 09:30',
+        addedBy: 'Stephen Mayowa',
+        lastUpdatedBy: 'Stephen Mayowa',
       },
-      {
-        id: 'itm-104',
-        containerId: 'cnt-1',
-        name: 'Sugar (50kg Sacks)',
-        quantity: 25,
-        unit: 'sacks',
-        addedDate: '2026-10-15',
-        lastUpdated: '2026-10-19 09:20',
-        addedBy: 'David Adeleke',
-        lastUpdatedBy: 'Stephen Mayowa'
-      }
     ],
     history: [
       {
-        id: 'hist-1',
+        id: 'hist-103',
         containerId: 'cnt-1',
-        containerName: 'Container 1 (Yard Front)',
-        itemId: 'itm-101',
-        itemName: 'Cooking Oil (5 Litre Cans)',
-        action: 'removed',
-        amount: 5,
-        quantityAfter: 45,
-        personName: 'Stephen Mayowa',
-        note: 'Customer picked up for shop delivery',
-        date: '2026-10-19 14:30'
-      },
-      {
-        id: 'hist-2',
-        containerId: 'cnt-1',
-        containerName: 'Container 1 (Yard Front)',
-        itemId: 'itm-104',
-        itemName: 'Sugar (50kg Sacks)',
-        action: 'removed',
-        amount: 10,
-        quantityAfter: 25,
-        personName: 'Stephen Mayowa',
-        note: 'Sold to bakery store',
-        date: '2026-10-19 09:20'
-      },
-      {
-        id: 'hist-3',
-        containerId: 'cnt-1',
-        containerName: 'Container 1 (Yard Front)',
+        containerName: 'Container 1 (MSKU-904821 - 40ft)',
         itemId: 'itm-102',
-        itemName: 'Rice (50kg Royal Bags)',
-        action: 'removed',
-        amount: 20,
-        quantityAfter: 80,
-        personName: 'Michael Obi',
-        note: 'Moved to wholesale retail front',
-        date: '2026-10-18 10:15'
-      }
-    ]
+        itemName: 'Chinedu Okafor Ventures',
+        action: 'collected',
+        summary: 'Taken updated to "12 of 30 Boxes Taken (18 Left)" • Receiver: Emeka Okafor (0813 400 7788) on 2026-10-28',
+        personName: 'Michael Ade',
+        date: '2026-10-28 11:45',
+      },
+      {
+        id: 'hist-102',
+        containerId: 'cnt-1',
+        containerName: 'Container 1 (MSKU-904821 - 40ft)',
+        itemId: 'itm-101',
+        itemName: 'Alhaji Musa Ibrahim',
+        action: 'payment',
+        summary: 'Full payment completed (Paid: 1,450,000, Credit: 0) • Collected by Suleiman Musa',
+        personName: 'Stephen Mayowa',
+        date: '2026-10-27 15:20',
+      },
+    ],
   },
   {
     id: 'cnt-2',
-    name: 'Container 2 (Back Warehouse)',
-    note: 'Building Materials & Hardware',
-    createdBy: 'Stephen Mayowa',
-    updatedBy: 'Stephen Mayowa',
-    createdAt: '2026-10-16T11:00:00Z',
-    updatedAt: '2026-10-19T11:00:00Z',
+    name: 'Container 2 (CMAU-441092 - 40ft)',
+    warehouse: 'Warehouse B - Annex',
+    note: 'Hardware, Auto Parts & Building Materials',
+    createdBy: 'Michael Ade',
+    updatedBy: 'Michael Ade',
+    createdAt: '2026-10-23T10:00:00Z',
+    updatedAt: '2026-10-28T16:10:00Z',
     items: [
       {
         id: 'itm-201',
         containerId: 'cnt-2',
-        name: 'Portland Cement (50kg)',
-        quantity: 120,
-        unit: 'bags',
-        addedDate: '2026-10-16',
-        lastUpdated: '2026-10-19 11:00',
-        addedBy: 'Stephen Mayowa',
-        lastUpdatedBy: 'Stephen Mayowa'
+        containerName: 'Container 2 (CMAU-441092 - 40ft)',
+        name: 'Kazeem Auto Spares Ltd',
+        phone: '0809 334 5566',
+        cbm: 22.0,
+        amount: 2200000,
+        takenStatus: 'Partial',
+        taken: '15 Pallets Taken (10 Remaining)',
+        paid: 1500000,
+        credit: 700000,
+        receiverName: 'Tunde Bakare',
+        receiverPhone: '0805 667 8899',
+        receiverDate: '2026-10-28',
+        warehouse: 'Warehouse B - Annex',
+        addedDate: '2026-10-23',
+        lastUpdated: '2026-10-28 16:10',
+        addedBy: 'Michael Ade',
+        lastUpdatedBy: 'Michael Ade',
       },
       {
         id: 'itm-202',
         containerId: 'cnt-2',
-        name: 'Galvanized Roofing Nails (Boxes)',
-        quantity: 35,
-        unit: 'boxes',
-        addedDate: '2026-10-16',
-        lastUpdated: '2026-10-17 12:00',
-        addedBy: 'Stephen Mayowa',
-        lastUpdatedBy: 'David Adeleke'
+        containerName: 'Container 2 (CMAU-441092 - 40ft)',
+        name: 'Grace Hardware & Tools',
+        phone: '0818 223 9090',
+        cbm: 6.5,
+        amount: 650000,
+        takenStatus: 'Not Taken',
+        taken: 'Not Taken (Awaiting Clearance)',
+        paid: 650000,
+        credit: 0,
+        receiverName: '',
+        receiverPhone: '',
+        receiverDate: '',
+        warehouse: 'Warehouse B - Annex',
+        addedDate: '2026-10-24',
+        lastUpdated: '2026-10-24 12:00',
+        addedBy: 'Michael Ade',
+        lastUpdatedBy: 'Michael Ade',
       },
-      {
-        id: 'itm-203',
-        containerId: 'cnt-2',
-        name: 'Aluminium Roofing Sheets (Bundles)',
-        quantity: 18,
-        unit: 'bundles',
-        addedDate: '2026-10-16',
-        lastUpdated: '2026-10-16 11:00',
-        addedBy: 'Stephen Mayowa',
-        lastUpdatedBy: 'Stephen Mayowa'
-      }
     ],
     history: [
       {
-        id: 'hist-4',
+        id: 'hist-201',
         containerId: 'cnt-2',
-        containerName: 'Container 2 (Back Warehouse)',
+        containerName: 'Container 2 (CMAU-441092 - 40ft)',
         itemId: 'itm-201',
-        itemName: 'Portland Cement (50kg)',
-        action: 'removed',
-        amount: 30,
-        quantityAfter: 120,
-        personName: 'Stephen Mayowa',
-        note: 'Delivered to contractor site',
-        date: '2026-10-19 11:00'
-      }
-    ]
-  }
+        itemName: 'Kazeem Auto Spares Ltd',
+        action: 'collected',
+        summary: 'Part cargo collected (15 Pallets Taken) by Tunde Bakare (0805 667 8899) • Paid: 1,500,000, Credit: 700,000',
+        personName: 'Michael Ade',
+        date: '2026-10-28 16:10',
+      },
+    ],
+  },
 ];
 
 let cachedContainers: Container[] | null = null;
+let cachedRaw: string | null = null;
 
-export function subscribeToStorage(callback: () => void): () => void {
-  if (typeof window === 'undefined') return () => {};
-  window.addEventListener(STORAGE_UPDATE_EVENT, callback);
-  return () => window.removeEventListener(STORAGE_UPDATE_EVENT, callback);
-}
-
-function triggerUpdate() {
+function dispatchUpdate(): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event(STORAGE_UPDATE_EVENT));
   }
 }
 
+export function subscribeToStorage(callback: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const handler = () => callback();
+  window.addEventListener(STORAGE_UPDATE_EVENT, handler);
+  window.addEventListener('storage', handler);
+  return () => {
+    window.removeEventListener(STORAGE_UPDATE_EVENT, handler);
+    window.removeEventListener('storage', handler);
+  };
+}
+
 function saveContainers(containers: Container[]): void {
-  cachedContainers = containers;
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(containers));
+    const serialized = JSON.stringify(containers);
+    window.localStorage.setItem(STORAGE_KEY, serialized);
+    cachedRaw = serialized;
+    cachedContainers = containers;
+    dispatchUpdate();
   } catch (err) {
-    console.error('Error saving containers:', err);
+    console.error('Failed to save containers:', err);
   }
-  triggerUpdate();
 }
 
 export function getContainers(): Container[] {
   if (typeof window === 'undefined') return INITIAL_CONTAINERS;
-  if (!cachedContainers) {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        cachedContainers = JSON.parse(raw);
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      const serialized = JSON.stringify(INITIAL_CONTAINERS);
+      window.localStorage.setItem(STORAGE_KEY, serialized);
+      cachedRaw = serialized;
+      cachedContainers = INITIAL_CONTAINERS;
+      return INITIAL_CONTAINERS;
+    }
+    if (raw !== cachedRaw || !cachedContainers) {
+      cachedRaw = raw;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        cachedContainers = parsed;
       } else {
         cachedContainers = INITIAL_CONTAINERS;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_CONTAINERS));
       }
-    } catch {
-      cachedContainers = INITIAL_CONTAINERS;
     }
+  } catch {
+    cachedContainers = INITIAL_CONTAINERS;
   }
   return cachedContainers || INITIAL_CONTAINERS;
 }
 
-export function addContainer(name: string, personName: string, note?: string): Container {
+export function addContainer(
+  name: string,
+  warehouse: string,
+  personName: string,
+  note?: string
+): Container {
   const containers = [...getContainers()];
   const person = personName.trim() || 'Staff';
   saveLastOperatorName(person);
 
+  const cleanName = name.trim() || `Container ${containers.length + 1}`;
+  const cleanWarehouse = warehouse.trim() || 'Main Warehouse';
+  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
   const newContainer: Container = {
     id: `cnt-${Date.now()}`,
-    name: name.trim() || `Container ${containers.length + 1}`,
+    name: cleanName,
+    warehouse: cleanWarehouse,
     note: note?.trim() || undefined,
     createdBy: person,
     updatedBy: person,
@@ -241,101 +288,142 @@ export function addContainer(name: string, personName: string, note?: string): C
       {
         id: `hist-${Date.now()}`,
         containerId: `cnt-${Date.now()}`,
-        containerName: name.trim() || `Container ${containers.length + 1}`,
-        itemName: 'Container Created',
+        containerName: cleanName,
+        itemName: 'Container Registered',
         action: 'added',
-        amount: 0,
-        quantityAfter: 0,
+        summary: `Container "${cleanName}" registered at ${cleanWarehouse}`,
         personName: person,
-        note: 'New container added to Deep Down Logistics inventory',
-        date: new Date().toISOString().replace('T', ' ').substring(0, 16)
-      }
+        date: nowStr,
+      },
     ],
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
+
   containers.unshift(newContainer);
   saveContainers(containers);
   return newContainer;
 }
 
-export function updateContainer(id: string, name: string, personName: string, note?: string): void {
-  const person = personName.trim() || 'Staff';
-  saveLastOperatorName(person);
-  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
-
-  const containers = getContainers().map(c => {
-    if (c.id === id) {
-      const updatedHistory: ItemHistory = {
-        id: `hist-${Date.now()}`,
-        containerId: c.id,
-        containerName: name.trim() || c.name,
-        itemName: 'Container Details',
-        action: 'updated',
-        amount: 0,
-        quantityAfter: c.items.reduce((sum, it) => sum + it.quantity, 0),
-        personName: person,
-        note: `Container updated (Name: ${name.trim()}, Note: ${note?.trim() || 'none'})`,
-        date: nowStr
-      };
-
-      return {
-        ...c,
-        name: name.trim() || c.name,
-        note: note !== undefined ? note.trim() : c.note,
-        updatedBy: person,
-        updatedAt: new Date().toISOString(),
-        history: [updatedHistory, ...c.history]
-      };
-    }
-    return c;
-  });
-  saveContainers(containers);
-}
-
-export function deleteContainer(id: string): void {
-  const containers = getContainers().filter(c => c.id !== id);
-  saveContainers(containers);
-}
-
-export function addItemToContainer(
-  containerId: string,
+export function updateContainer(
+  id: string,
   name: string,
-  quantity: number,
-  unit: string,
-  personName: string
+  warehouse: string,
+  personName: string,
+  note?: string
 ): void {
   const person = personName.trim() || 'Staff';
   saveLastOperatorName(person);
   const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
 
-  const containers = getContainers().map(c => {
+  const containers = getContainers().map((c) => {
+    if (c.id !== id) return c;
+
+    const cleanName = name.trim() || c.name;
+    const cleanWarehouse = warehouse.trim() || c.warehouse;
+
+    const updatedItems = c.items.map((item) => ({
+      ...item,
+      containerName: cleanName,
+    }));
+
+    const historyEntry: ItemHistory = {
+      id: `hist-${Date.now()}`,
+      containerId: c.id,
+      containerName: cleanName,
+      itemName: 'Container Details',
+      action: 'updated',
+      summary: `Updated container name to "${cleanName}" • Warehouse: "${cleanWarehouse}"`,
+      personName: person,
+      date: nowStr,
+    };
+
+    return {
+      ...c,
+      name: cleanName,
+      warehouse: cleanWarehouse,
+      note: note !== undefined ? note.trim() : c.note,
+      updatedBy: person,
+      updatedAt: new Date().toISOString(),
+      items: updatedItems,
+      history: [historyEntry, ...c.history],
+    };
+  });
+
+  saveContainers(containers);
+}
+
+export function deleteContainer(id: string): void {
+  const containers = getContainers().filter((c) => c.id !== id);
+  saveContainers(containers);
+}
+
+export interface CargoInputData {
+  name: string; // 2. Customer Name
+  phone: string; // 3. Phone Number
+  cbm: number; // 4. CBM
+  amount: number; // 5. Amount
+  takenStatus: TakenStatus; // 6. Taken status
+  taken: string; // 6. Taken description/quantity
+  paid: number; // 7. Paid
+  credit?: number; // 8. Credit (auto-computed if omitted)
+  receiverName: string; // 9a. Receiver Name
+  receiverPhone: string; // 9b. Receiver Phone
+  receiverDate: string; // 9c. Receiver Date
+  warehouse: string; // 10. Warehouse
+  personName: string; // Compulsory operator name
+}
+
+export function addCargoItem(containerId: string, input: CargoInputData): void {
+  const person = input.personName.trim() || 'Staff';
+  saveLastOperatorName(person);
+  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+  const amount = Math.max(0, Number(input.amount) || 0);
+  const paid = Math.max(0, Number(input.paid) || 0);
+  const credit = input.credit !== undefined ? Math.max(0, Number(input.credit)) : Math.max(0, amount - paid);
+  const cbm = Math.max(0, Number(input.cbm) || 0);
+  const takenText = input.taken.trim() || input.takenStatus;
+
+  const containers = getContainers().map((c) => {
     if (c.id !== containerId) return c;
 
     const newItem: ContainerItem = {
       id: `itm-${Date.now()}`,
-      containerId,
-      name: name.trim(),
-      quantity: Math.max(0, Number(quantity) || 0),
-      unit: unit.trim() || 'items',
+      containerId: c.id,
+      containerName: c.name,
+      name: input.name.trim(),
+      phone: input.phone.trim(),
+      cbm,
+      amount,
+      takenStatus: input.takenStatus,
+      taken: takenText,
+      paid,
+      credit,
+      receiverName: input.receiverName.trim(),
+      receiverPhone: input.receiverPhone.trim(),
+      receiverDate: input.receiverDate.trim(),
+      warehouse: input.warehouse.trim() || c.warehouse,
       addedDate: nowStr.split(' ')[0],
       lastUpdated: nowStr,
       addedBy: person,
-      lastUpdatedBy: person
+      lastUpdatedBy: person,
     };
+
+    const receiverSummary = newItem.receiverName
+      ? ` • Receiver: ${newItem.receiverName} (${newItem.receiverPhone || 'No phone'}) on ${newItem.receiverDate || 'N/A'}`
+      : '';
 
     const newHistory: ItemHistory = {
       id: `hist-${Date.now()}`,
-      containerId,
+      containerId: c.id,
       containerName: c.name,
       itemId: newItem.id,
       itemName: newItem.name,
       action: 'added',
-      amount: newItem.quantity,
-      quantityAfter: newItem.quantity,
+      summary: `Added customer record • CBM: ${cbm} • Amount: ${formatMoney(amount)} • Paid: ${formatMoney(paid)} • Credit: ${formatMoney(credit)} • Taken: ${takenText} • Warehouse: ${newItem.warehouse}${receiverSummary}`,
       personName: person,
-      note: 'Initial goods stocked into container',
-      date: nowStr
+      date: nowStr,
     };
 
     return {
@@ -343,129 +431,102 @@ export function addItemToContainer(
       updatedBy: person,
       items: [newItem, ...c.items],
       history: [newHistory, ...c.history],
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
   });
 
   saveContainers(containers);
 }
 
-export function removeItemFromContainer(
+export function updateCargoItem(
   containerId: string,
   itemId: string,
-  amount: number,
-  personName: string,
-  note?: string
-): boolean {
-  if (amount <= 0) return false;
-  const person = personName.trim() || 'Staff';
-  saveLastOperatorName(person);
-  const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
-  let success = false;
-
-  const containers = getContainers().map(c => {
-    if (c.id !== containerId) return c;
-
-    const targetItem = c.items.find(i => i.id === itemId);
-    if (!targetItem) return c;
-
-    const actualAmount = Math.min(amount, targetItem.quantity);
-    const newQty = targetItem.quantity - actualAmount;
-    success = true;
-
-    const updatedItems = c.items.map(i => {
-      if (i.id === itemId) {
-        return {
-          ...i,
-          quantity: newQty,
-          lastUpdated: nowStr,
-          lastUpdatedBy: person
-        };
-      }
-      return i;
-    });
-
-    const newHistory: ItemHistory = {
-      id: `hist-${Date.now()}`,
-      containerId,
-      containerName: c.name,
-      itemId,
-      itemName: targetItem.name,
-      action: 'removed',
-      amount: actualAmount,
-      quantityAfter: newQty,
-      personName: person,
-      note: note?.trim() || 'Removed from container',
-      date: nowStr
-    };
-
-    return {
-      ...c,
-      updatedBy: person,
-      items: updatedItems,
-      history: [newHistory, ...c.history],
-      updatedAt: new Date().toISOString()
-    };
-  });
-
-  if (success) {
-    saveContainers(containers);
+  updates: Partial<Omit<CargoInputData, 'personName'>> & {
+    personName: string;
+    actionType?: 'updated' | 'payment' | 'collected';
+    changeNote?: string;
   }
-  return success;
-}
-
-export function addStockToItem(
-  containerId: string,
-  itemId: string,
-  amount: number,
-  personName: string,
-  note?: string
 ): void {
-  if (amount <= 0) return;
-  const person = personName.trim() || 'Staff';
+  const person = updates.personName.trim() || 'Staff';
   saveLastOperatorName(person);
   const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
 
-  const containers = getContainers().map(c => {
+  const containers = getContainers().map((c) => {
     if (c.id !== containerId) return c;
 
-    const targetItem = c.items.find(i => i.id === itemId);
-    if (!targetItem) return c;
+    const existing = c.items.find((i) => i.id === itemId);
+    if (!existing) return c;
 
-    const newQty = targetItem.quantity + amount;
+    const amount = updates.amount !== undefined ? Math.max(0, Number(updates.amount) || 0) : existing.amount;
+    const paid = updates.paid !== undefined ? Math.max(0, Number(updates.paid) || 0) : existing.paid;
+    const credit =
+      updates.credit !== undefined
+        ? Math.max(0, Number(updates.credit))
+        : Math.max(0, amount - paid);
+    const cbm = updates.cbm !== undefined ? Math.max(0, Number(updates.cbm) || 0) : existing.cbm;
+    const takenStatus = updates.takenStatus !== undefined ? updates.takenStatus : existing.takenStatus;
+    const taken = updates.taken !== undefined ? updates.taken.trim() || takenStatus : existing.taken;
 
-    const updatedItems = c.items.map(i => {
-      if (i.id === itemId) {
-        return {
-          ...i,
-          quantity: newQty,
-          lastUpdated: nowStr,
-          lastUpdatedBy: person
-        };
-      }
-      return i;
-    });
-
-    const newHistory: ItemHistory = {
-      id: `hist-${Date.now()}`,
-      containerId,
-      containerName: c.name,
-      itemId,
-      itemName: targetItem.name,
-      action: 'added',
+    const updatedItem: ContainerItem = {
+      ...existing,
+      name: updates.name !== undefined ? updates.name.trim() || existing.name : existing.name,
+      phone: updates.phone !== undefined ? updates.phone.trim() : existing.phone,
+      cbm,
       amount,
-      quantityAfter: newQty,
+      takenStatus,
+      taken,
+      paid,
+      credit,
+      receiverName: updates.receiverName !== undefined ? updates.receiverName.trim() : existing.receiverName,
+      receiverPhone: updates.receiverPhone !== undefined ? updates.receiverPhone.trim() : existing.receiverPhone,
+      receiverDate: updates.receiverDate !== undefined ? updates.receiverDate.trim() : existing.receiverDate,
+      warehouse: updates.warehouse !== undefined ? updates.warehouse.trim() || c.warehouse : existing.warehouse,
+      lastUpdated: nowStr,
+      lastUpdatedBy: person,
+    };
+
+    const updatedItems = c.items.map((i) => (i.id === itemId ? updatedItem : i));
+
+    let summary = updates.changeNote || '';
+    if (!summary) {
+      const parts: string[] = [];
+      if (updates.taken !== undefined || updates.takenStatus !== undefined) {
+        parts.push(`Taken: "${updatedItem.taken}"`);
+      }
+      if (updates.receiverName !== undefined && updatedItem.receiverName) {
+        parts.push(
+          `Receiver: ${updatedItem.receiverName} (${updatedItem.receiverPhone || 'No phone'}) on ${updatedItem.receiverDate || nowStr.split(' ')[0]}`
+        );
+      }
+      if (updates.paid !== undefined || updates.amount !== undefined) {
+        parts.push(
+          `Financials: Amount ${formatMoney(updatedItem.amount)}, Paid ${formatMoney(updatedItem.paid)}, Credit ${formatMoney(updatedItem.credit)}`
+        );
+      }
+      if (updates.warehouse !== undefined && updates.warehouse !== existing.warehouse) {
+        parts.push(`Warehouse: ${updatedItem.warehouse}`);
+      }
+      summary = parts.length > 0 ? parts.join(' • ') : `Updated record details for ${updatedItem.name}`;
+    }
+
+    const historyEntry: ItemHistory = {
+      id: `hist-${Date.now()}`,
+      containerId: c.id,
+      containerName: c.name,
+      itemId: updatedItem.id,
+      itemName: updatedItem.name,
+      action: updates.actionType || 'updated',
+      summary,
       personName: person,
-      note: note?.trim() || 'Added more stock into container',
-      date: nowStr
+      date: nowStr,
     };
 
     return {
       ...c,
       updatedBy: person,
       items: updatedItems,
-      history: [newHistory, ...c.history],
-      updatedAt: new Date().toISOString()
+      history: [historyEntry, ...c.history],
+      updatedAt: new Date().toISOString(),
     };
   });
 
@@ -473,12 +534,12 @@ export function addStockToItem(
 }
 
 export function deleteItem(containerId: string, itemId: string): void {
-  const containers = getContainers().map(c => {
+  const containers = getContainers().map((c) => {
     if (c.id !== containerId) return c;
     return {
       ...c,
-      items: c.items.filter(i => i.id !== itemId),
-      updatedAt: new Date().toISOString()
+      items: c.items.filter((i) => i.id !== itemId),
+      updatedAt: new Date().toISOString(),
     };
   });
   saveContainers(containers);

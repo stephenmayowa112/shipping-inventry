@@ -3,377 +3,378 @@
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import { Container } from './types';
+import { formatMoney } from './storage';
 
-// Export a single container to Excel (.xlsx)
+function formatReceiverColumn(name: string, phone: string, date: string): string {
+  if (!name && !phone && !date) return 'Not Received Yet';
+  const parts: string[] = [];
+  if (name) parts.push(name);
+  if (phone) parts.push(`Tel: ${phone}`);
+  if (date) parts.push(`Date: ${date}`);
+  return parts.join(' | ');
+}
+
+// Export a single container to Excel (.xlsx) with all 10 fields
 export function exportSingleContainerToExcel(container: Container): void {
   const wb = XLSX.utils.book_new();
-  const dateStr = new Date().toISOString().split('T')[0];
 
-  // Sheet 1: Current Items Inside Container
-  const itemsData = container.items.map((item, index) => ({
-    '#': index + 1,
-    'Company': 'Deep Down Logistics',
-    'Container': container.name,
-    'Item Name': item.name,
-    'Current Quantity Left': item.quantity,
-    'Unit': item.unit,
-    'Added By': item.addedBy || 'Staff',
-    'Date Added': item.addedDate,
+  // Sheet 1: All 10 Cargo Fields
+  const cargoRows = container.items.map((item, idx) => ({
+    'S/N': idx + 1,
+    '1. Container': item.containerName || container.name,
+    '2. Name': item.name,
+    '3. Phone Number': item.phone,
+    '4. CBM': item.cbm,
+    '5. Amount': item.amount,
+    '6. Taken': item.taken,
+    '7. Paid': item.paid,
+    '8. Credit': item.credit,
+    "9. Receiver's (Name, Phone & Date)": formatReceiverColumn(
+      item.receiverName,
+      item.receiverPhone,
+      item.receiverDate
+    ),
+    '9a. Receiver Name': item.receiverName || '-',
+    '9b. Receiver Phone': item.receiverPhone || '-',
+    '9c. Receiver Date': item.receiverDate || '-',
+    '10. Warehouse': item.warehouse || container.warehouse,
+    'Updated By (Staff)': item.lastUpdatedBy || container.updatedBy || 'Staff',
     'Last Updated': item.lastUpdated,
-    'Last Updated By': item.lastUpdatedBy || item.addedBy || 'Staff'
   }));
 
-  const totalGoods = container.items.reduce((sum, item) => sum + item.quantity, 0);
+  const wsCargo = XLSX.utils.json_to_sheet(
+    cargoRows.length > 0
+      ? cargoRows
+      : [
+          {
+            '1. Container': container.name,
+            '2. Name': 'No records added yet',
+            '3. Phone Number': '-',
+            '4. CBM': 0,
+            '5. Amount': 0,
+            '6. Taken': '-',
+            '7. Paid': 0,
+            '8. Credit': 0,
+            "9. Receiver's (Name, Phone & Date)": '-',
+            '10. Warehouse': container.warehouse,
+          },
+        ]
+  );
 
-  // Add a summary row at the end
-  if (itemsData.length > 0) {
-    itemsData.push({
-      '#': '' as any,
-      'Company': 'Deep Down Logistics',
-      'Container': container.name,
-      'Item Name': 'TOTAL GOODS IN CONTAINER',
-      'Current Quantity Left': totalGoods,
-      'Unit': 'items',
-      'Added By': '',
-      'Date Added': '',
-      'Last Updated': '',
-      'Last Updated By': ''
-    });
-  }
+  wsCargo['!cols'] = [
+    { wch: 6 },
+    { wch: 26 },
+    { wch: 24 },
+    { wch: 16 },
+    { wch: 10 },
+    { wch: 14 },
+    { wch: 26 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 36 },
+    { wch: 18 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 22 },
+    { wch: 18 },
+    { wch: 18 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsCargo, 'Container Records');
 
-  const wsItems = XLSX.utils.json_to_sheet(itemsData);
-  XLSX.utils.book_append_sheet(wb, wsItems, 'Goods in Container');
+  // Sheet 2: Audit & Update History
+  const historyData = container.history.map((h, idx) => ({
+    'S/N': idx + 1,
+    Container: h.containerName,
+    Customer: h.itemName,
+    Action: h.action.toUpperCase(),
+    Details: h.summary,
+    'Staff (Updated By)': h.personName || 'Staff',
+    'Date & Time': h.date,
+  }));
 
-  // Sheet 2: History of Items Removed / Added
-  if (container.history && container.history.length > 0) {
-    const historyData = container.history.map((h, index) => ({
-      '#': index + 1,
-      'Company': 'Deep Down Logistics',
-      'Date & Time': h.date,
-      'Action': h.action === 'removed' ? 'REMOVED / TOOK OUT' : h.action === 'updated' ? 'CONTAINER UPDATED' : 'ADDED STOCK',
-      'Item Name': h.itemName,
-      'Amount': h.amount,
-      'Remaining Balance': h.quantityAfter,
-      'Person (Updated/Created By)': h.personName || 'Staff',
-      'Note / Reason': h.note || ''
-    }));
+  if (historyData.length > 0) {
     const wsHistory = XLSX.utils.json_to_sheet(historyData);
-    XLSX.utils.book_append_sheet(wb, wsHistory, 'Removal & Update Log');
+    wsHistory['!cols'] = [
+      { wch: 6 },
+      { wch: 24 },
+      { wch: 24 },
+      { wch: 14 },
+      { wch: 55 },
+      { wch: 20 },
+      { wch: 18 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsHistory, 'Update Log');
   }
 
   const cleanName = container.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-  XLSX.writeFile(wb, `Deep_Down_Logistics_${cleanName}_Inventory_${dateStr}.xlsx`);
+  const dateStr = new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb, `Deep_Down_Logistics_${cleanName}_${dateStr}.xlsx`);
 }
 
-// Export ALL containers to Excel (.xlsx)
+// Export ALL containers to a single Excel workbook (.xlsx)
 export function exportAllContainersToExcel(containers: Container[]): void {
   const wb = XLSX.utils.book_new();
-  const dateStr = new Date().toISOString().split('T')[0];
 
-  // Sheet 1: Containers Summary
-  const summaryData = containers.map((c, idx) => {
-    const totalItemsCount = c.items.length;
-    const totalGoodsCount = c.items.reduce((sum, item) => sum + item.quantity, 0);
+  // Sheet 1: Master 10-Field Sheet across all containers
+  const allRows: Record<string, string | number>[] = [];
+  containers.forEach((c) => {
+    if (c.items.length === 0) {
+      allRows.push({
+        '1. Container': c.name,
+        '2. Name': '(Empty Container)',
+        '3. Phone Number': '-',
+        '4. CBM': 0,
+        '5. Amount': 0,
+        '6. Taken': 'Empty',
+        '7. Paid': 0,
+        '8. Credit': 0,
+        "9. Receiver's (Name, Phone & Date)": '-',
+        '10. Warehouse': c.warehouse,
+        'Staff (Updated By)': c.updatedBy || c.createdBy || 'Staff',
+        'Last Updated': c.updatedAt.substring(0, 10),
+      });
+    } else {
+      c.items.forEach((item) => {
+        allRows.push({
+          '1. Container': item.containerName || c.name,
+          '2. Name': item.name,
+          '3. Phone Number': item.phone,
+          '4. CBM': item.cbm,
+          '5. Amount': item.amount,
+          '6. Taken': item.taken,
+          '7. Paid': item.paid,
+          '8. Credit': item.credit,
+          "9. Receiver's (Name, Phone & Date)": formatReceiverColumn(
+            item.receiverName,
+            item.receiverPhone,
+            item.receiverDate
+          ),
+          '10. Warehouse': item.warehouse || c.warehouse,
+          'Staff (Updated By)': item.lastUpdatedBy || c.updatedBy || 'Staff',
+          'Last Updated': item.lastUpdated,
+        });
+      });
+    }
+  });
+
+  const wsMaster = XLSX.utils.json_to_sheet(allRows);
+  wsMaster['!cols'] = [
+    { wch: 28 },
+    { wch: 24 },
+    { wch: 16 },
+    { wch: 10 },
+    { wch: 15 },
+    { wch: 28 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 38 },
+    { wch: 22 },
+    { wch: 18 },
+    { wch: 18 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsMaster, 'All Containers (10 Fields)');
+
+  // Sheet 2: Container Summary
+  const summaryRows = containers.map((c, idx) => {
+    const totalCbm = c.items.reduce((acc, i) => acc + i.cbm, 0);
+    const totalAmount = c.items.reduce((acc, i) => acc + i.amount, 0);
+    const totalPaid = c.items.reduce((acc, i) => acc + i.paid, 0);
+    const totalCredit = c.items.reduce((acc, i) => acc + i.credit, 0);
+
     return {
-      '#': idx + 1,
-      'Company': 'Deep Down Logistics',
-      'Container Name': c.name,
-      'Location / Note': c.note || '—',
+      'S/N': idx + 1,
+      '1. Container': c.name,
+      '10. Warehouse': c.warehouse,
+      'Customer Entries': c.items.length,
+      'Total CBM': Number(totalCbm.toFixed(2)),
+      'Total Amount': totalAmount,
+      'Total Paid': totalPaid,
+      'Total Credit': totalCredit,
       'Created By': c.createdBy || 'Staff',
       'Last Updated By': c.updatedBy || 'Staff',
-      'Different Products': totalItemsCount,
-      'Total Goods Left': totalGoodsCount,
-      'Date Created': c.createdAt ? c.createdAt.slice(0, 10) : '—',
-      'Last Updated': c.updatedAt ? c.updatedAt.slice(0, 10) : '—'
     };
   });
-  const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-  XLSX.utils.book_append_sheet(wb, wsSummary, 'All Containers');
 
-  // Sheet 2: All Items Across Containers
-  const allItemsData: any[] = [];
-  containers.forEach(c => {
-    c.items.forEach(item => {
-      allItemsData.push({
-        'Company': 'Deep Down Logistics',
-        'Container': c.name,
-        'Item Name': item.name,
-        'Current Quantity Left': item.quantity,
-        'Unit': item.unit,
-        'Stocked By': item.addedBy || 'Staff',
-        'Last Updated': item.lastUpdated
-      });
-    });
-  });
-  const wsAllItems = XLSX.utils.json_to_sheet(allItemsData);
-  XLSX.utils.book_append_sheet(wb, wsAllItems, 'All Inventory Items');
+  const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+  wsSummary['!cols'] = [
+    { wch: 6 },
+    { wch: 28 },
+    { wch: 22 },
+    { wch: 16 },
+    { wch: 12 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 18 },
+    { wch: 18 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Container Summary');
 
-  // Sheet 3: Full Log of Removals Across Containers
-  const allHistoryData: any[] = [];
-  containers.forEach(c => {
-    c.history.forEach(h => {
-      allHistoryData.push({
-        'Company': 'Deep Down Logistics',
-        'Date & Time': h.date,
-        'Container': c.name,
-        'Action': h.action === 'removed' ? 'REMOVED / TOOK OUT' : h.action === 'updated' ? 'CONTAINER UPDATED' : 'ADDED STOCK',
-        'Item Name': h.itemName,
-        'Amount': h.amount,
-        'Remaining Left': h.quantityAfter,
-        'Person (Updated/Created By)': h.personName || 'Staff',
-        'Note / Reason': h.note || ''
-      });
-    });
-  });
-  if (allHistoryData.length > 0) {
-    const wsHistory = XLSX.utils.json_to_sheet(allHistoryData);
-    XLSX.utils.book_append_sheet(wb, wsHistory, 'Removal & Update History');
-  }
-
+  const dateStr = new Date().toISOString().split('T')[0];
   XLSX.writeFile(wb, `Deep_Down_Logistics_All_Containers_${dateStr}.xlsx`);
 }
 
-// Generate clean, printable PDF for a single container
-export function exportSingleContainerToPdf(container: Container): void {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  let y = 18;
+// Helper to draw a 10-column table header in Landscape PDF
+function drawPdfTableHeader(doc: jsPDF, y: number): number {
+  doc.setFillColor(15, 23, 42);
+  doc.rect(10, y - 5, 277, 8, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(255, 255, 255);
 
-  // Header Box - Deep Down Logistics
-  doc.setFillColor(15, 23, 42); // slate-900
-  doc.rect(14, 12, 182, 18, 'F');
-  
+  doc.text('1. Container', 12, y);
+  doc.text('2. Name', 45, y);
+  doc.text('3. Phone', 82, y);
+  doc.text('4. CBM', 108, y);
+  doc.text('5. Amount', 123, y);
+  doc.text('6. Taken', 146, y);
+  doc.text('7. Paid', 184, y);
+  doc.text('8. Credit', 206, y);
+  doc.text("9. Receiver (Name/Tel/Date)", 226, y);
+  doc.text('10. Warehouse', 265, y);
+
+  doc.setTextColor(15, 23, 42);
+  return y + 7;
+}
+
+// Export a single container to PDF (Landscape for 10 fields)
+export function exportSingleContainerToPdf(container: Container): void {
+  const doc = new jsPDF({ orientation: 'landscape' });
+  const dateStr = new Date().toLocaleString();
+
+  const totalCbm = container.items.reduce((s, i) => s + i.cbm, 0);
+  const totalAmount = container.items.reduce((s, i) => s + i.amount, 0);
+  const totalPaid = container.items.reduce((s, i) => s + i.paid, 0);
+  const totalCredit = container.items.reduce((s, i) => s + i.credit, 0);
+
+  // Header Banner
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 297, 30, 'F');
+
+  doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.setTextColor(255, 255, 255);
-  doc.text('DEEP DOWN LOGISTICS', 18, 20);
+  doc.text(`DEEP DOWN LOGISTICS — ${container.name.toUpperCase()}`, 12, 12);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(203, 213, 225); // slate-300
-  doc.text('Container Inventory & Goods Verification Sheet', 18, 26);
+  doc.text(
+    `Warehouse: ${container.warehouse}   |   Created by: ${container.createdBy || 'Staff'}   |   Updated by: ${container.updatedBy || 'Staff'}   |   Printed: ${dateStr}`,
+    12,
+    20
+  );
+  doc.text(
+    `Customers: ${container.items.length}   |   Total CBM: ${totalCbm.toFixed(2)}   |   Total Amount: ${formatMoney(totalAmount)}   |   Total Paid: ${formatMoney(totalPaid)}   |   Total Credit: ${formatMoney(totalCredit)}`,
+    12,
+    26
+  );
 
-  y = 37;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(15, 23, 42);
-  doc.text(container.name, 14, y);
+  let y = 40;
+  y = drawPdfTableHeader(doc, y);
 
-  if (container.note) {
-    y += 6;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Location / Note: ${container.note}`, 14, y);
-  }
-
-  const totalGoods = container.items.reduce((sum, item) => sum + item.quantity, 0);
-
-  y += 6;
-  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(71, 85, 105);
-  doc.text(`Created By: ${container.createdBy || 'Staff'}   |   Last Updated By: ${container.updatedBy || 'Staff'}`, 14, y);
-
-  y += 5.5;
-  doc.setTextColor(100, 116, 139);
-  doc.text(`Date Printed: ${new Date().toLocaleString()}   |   Total Goods Inside: ${totalGoods}`, 14, y);
-
-  y += 5;
-  doc.setDrawColor(226, 232, 240);
-  doc.line(14, y, 196, y);
-
-  y += 8;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(15, 23, 42);
-  doc.text('ITEMS CURRENTLY INSIDE THIS CONTAINER', 14, y);
-
-  y += 5;
-  // Table Header
-  doc.setFillColor(241, 245, 249);
-  doc.rect(14, y, 182, 8, 'F');
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42);
-  doc.text('#', 18, y + 5.5);
-  doc.text('ITEM NAME', 28, y + 5.5);
-  doc.text('QUANTITY LEFT', 115, y + 5.5);
-  doc.text('UNIT', 148, y + 5.5);
-  doc.text('STOCKED BY', 168, y + 5.5);
-
-  y += 8;
-  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
 
   if (container.items.length === 0) {
-    y += 6;
-    doc.setTextColor(148, 163, 184);
-    doc.text('No goods currently inside this container.', 18, y);
-    y += 10;
+    doc.text('No customer cargo records inside this container.', 12, y);
   } else {
-    container.items.forEach((item, index) => {
-      if (y > 270) {
-        doc.addPage();
+    container.items.forEach((item, idx) => {
+      if (y > 192) {
+        doc.addPage('a4', 'landscape');
         y = 20;
+        y = drawPdfTableHeader(doc, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
       }
-      if (index % 2 === 1) {
-        doc.setFillColor(248, 250, 252);
-        doc.rect(14, y, 182, 7, 'F');
-      }
-      doc.setTextColor(30, 41, 59);
-      doc.text((index + 1).toString(), 18, y + 5);
-      doc.text(item.name.substring(0, 38), 28, y + 5);
-      doc.setFont('helvetica', 'bold');
-      doc.text(item.quantity.toString(), 115, y + 5);
-      doc.setFont('helvetica', 'normal');
-      doc.text(item.unit, 148, y + 5);
-      doc.text((item.addedBy || 'Staff').substring(0, 14), 168, y + 5);
-      y += 7;
-    });
 
-    // Summary row
-    doc.setFillColor(241, 245, 249);
-    doc.rect(14, y, 182, 7.5, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text('TOTAL GOODS REMAINING:', 28, y + 5.2);
-    doc.text(totalGoods.toString(), 115, y + 5.2);
-    doc.text('items', 148, y + 5.2);
-    y += 12;
-  }
-
-  // Removals & Additions Log
-  if (container.history && container.history.length > 0) {
-    if (y > 225) {
-      doc.addPage();
-      y = 20;
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(15, 23, 42);
-    doc.text('RECORD OF RECENT REMOVALS & UPDATES', 14, y);
-
-    y += 5;
-    doc.setFillColor(241, 245, 249);
-    doc.rect(14, y, 182, 8, 'F');
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text('DATE', 17, y + 5.5);
-    doc.text('ACTION', 50, y + 5.5);
-    doc.text('ITEM', 82, y + 5.5);
-    doc.text('QTY', 125, y + 5.5);
-    doc.text('LEFT', 140, y + 5.5);
-    doc.text('PERSON (BY)', 158, y + 5.5);
-
-    y += 8;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-
-    container.history.slice(0, 18).forEach((h, idx) => {
-      if (y > 275) {
-        doc.addPage();
-        y = 20;
-      }
       if (idx % 2 === 1) {
         doc.setFillColor(248, 250, 252);
-        doc.rect(14, y, 182, 6.5, 'F');
+        doc.rect(10, y - 4.5, 277, 6.5, 'F');
       }
-      doc.setTextColor(51, 65, 85);
-      doc.text(h.date, 17, y + 4.5);
-      doc.text(h.action === 'removed' ? 'Removed (-)' : h.action === 'updated' ? 'Updated' : 'Added (+)', 50, y + 4.5);
-      doc.text(h.itemName.substring(0, 22), 82, y + 4.5);
-      doc.text(h.amount > 0 ? h.amount.toString() : '—', 125, y + 4.5);
-      doc.text(h.quantityAfter.toString(), 140, y + 4.5);
-      doc.text((h.personName || 'Staff').substring(0, 16), 158, y + 4.5);
+
+      const receiverStr = item.receiverName
+        ? `${item.receiverName} (${item.receiverPhone || '-'}) ${item.receiverDate || ''}`
+        : 'Not collected';
+
+      doc.text((item.containerName || container.name).substring(0, 18), 12, y);
+      doc.text(item.name.substring(0, 20), 45, y);
+      doc.text((item.phone || '-').substring(0, 15), 82, y);
+      doc.text(String(item.cbm), 108, y);
+      doc.text(formatMoney(item.amount), 123, y);
+      doc.text(item.taken.substring(0, 22), 146, y);
+      doc.text(formatMoney(item.paid), 184, y);
+      doc.text(formatMoney(item.credit), 206, y);
+      doc.text(receiverStr.substring(0, 24), 226, y);
+      doc.text((item.warehouse || container.warehouse).substring(0, 14), 265, y);
+
       y += 6.5;
     });
   }
 
-  // Footer note
-  doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184);
-  doc.text('Deep Down Logistics — Container Inventory System with Person Verification', 14, 288);
-
   const cleanName = container.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-  doc.save(`Deep_Down_Logistics_${cleanName}_Inventory.pdf`);
+  const fileDate = new Date().toISOString().split('T')[0];
+  doc.save(`Deep_Down_Logistics_${cleanName}_${fileDate}.pdf`);
 }
 
-// Generate printable PDF for ALL containers
+// Export ALL containers to PDF (Landscape for 10 fields)
 export function exportAllContainersToPdf(containers: Container[]): void {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  let y = 18;
+  const doc = new jsPDF({ orientation: 'landscape' });
+  const dateStr = new Date().toLocaleString();
 
-  // Header Box - Deep Down Logistics
-  doc.setFillColor(15, 23, 42); // slate-900
-  doc.rect(14, 12, 182, 18, 'F');
-  
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 297, 26, 'F');
+
+  doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.setTextColor(255, 255, 255);
-  doc.text('DEEP DOWN LOGISTICS', 18, 20);
+  doc.text('DEEP DOWN LOGISTICS — MASTER CONTAINER & CARGO REPORT', 12, 12);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(203, 213, 225); // slate-300
-  doc.text('Master Container Inventory Summary', 18, 26);
+  doc.text(`Total Containers: ${containers.length}   |   Generated: ${dateStr}`, 12, 20);
 
-  y = 37;
-  doc.setFontSize(9);
-  doc.setTextColor(100, 116, 139);
+  let y = 36;
+  y = drawPdfTableHeader(doc, y);
+
   doc.setFont('helvetica', 'normal');
-  doc.text(`Generated on: ${new Date().toLocaleString()}  |  Total Containers: ${containers.length}`, 14, y);
+  doc.setFontSize(7.5);
 
-  y += 7;
-
+  let rowIdx = 0;
   containers.forEach((c) => {
-    if (y > 235) {
-      doc.addPage();
-      y = 20;
-    }
-
-    const totalGoods = c.items.reduce((sum, item) => sum + item.quantity, 0);
-
-    doc.setFillColor(241, 245, 249);
-    doc.rect(14, y, 182, 9, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-    doc.setTextColor(15, 23, 42);
-    doc.text(`${c.name} (${totalGoods} items inside)`, 18, y + 6);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Created by: ${c.createdBy || 'Staff'} | Updated by: ${c.updatedBy || 'Staff'}`, 110, y + 6);
-
-    y += 11;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-
-    if (c.items.length === 0) {
-      doc.setTextColor(148, 163, 184);
-      doc.text('No items recorded in this container.', 18, y);
-      y += 8;
-    } else {
-      c.items.forEach((item) => {
-        if (y > 275) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.setTextColor(30, 41, 59);
-        doc.text(`• ${item.name}:`, 20, y);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${item.quantity} ${item.unit}`, 130, y);
+    c.items.forEach((item) => {
+      if (y > 192) {
+        doc.addPage('a4', 'landscape');
+        y = 20;
+        y = drawPdfTableHeader(doc, y);
         doc.setFont('helvetica', 'normal');
-        y += 5.5;
-      });
-      y += 4;
-    }
+        doc.setFontSize(7.5);
+      }
+
+      if (rowIdx % 2 === 1) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(10, y - 4.5, 277, 6.5, 'F');
+      }
+
+      const receiverStr = item.receiverName
+        ? `${item.receiverName} (${item.receiverPhone || '-'}) ${item.receiverDate || ''}`
+        : 'Not collected';
+
+      doc.text((item.containerName || c.name).substring(0, 18), 12, y);
+      doc.text(item.name.substring(0, 20), 45, y);
+      doc.text((item.phone || '-').substring(0, 15), 82, y);
+      doc.text(String(item.cbm), 108, y);
+      doc.text(formatMoney(item.amount), 123, y);
+      doc.text(item.taken.substring(0, 22), 146, y);
+      doc.text(formatMoney(item.paid), 184, y);
+      doc.text(formatMoney(item.credit), 206, y);
+      doc.text(receiverStr.substring(0, 24), 226, y);
+      doc.text((item.warehouse || c.warehouse).substring(0, 14), 265, y);
+
+      y += 6.5;
+      rowIdx++;
+    });
   });
 
-  // Footer note
-  doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184);
-  doc.text('Deep Down Logistics — Container Inventory System', 14, 288);
-
-  doc.save(`Deep_Down_Logistics_Master_Inventory_Summary.pdf`);
+  const fileDate = new Date().toISOString().split('T')[0];
+  doc.save(`Deep_Down_Logistics_All_Containers_${fileDate}.pdf`);
 }

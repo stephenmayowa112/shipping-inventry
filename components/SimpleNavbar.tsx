@@ -22,23 +22,22 @@ export function SimpleNavbar({
   onOpenAddContainer,
   onResetDemo,
   onGoHome,
-  selectedContainerName
+  selectedContainerName,
 }: SimpleNavbarProps) {
   const [showMobileExportMenu, setShowMobileExportMenu] = useState(false);
 
-  const totalGoodsAll = containers.reduce((acc, c) => {
-    return acc + c.items.reduce((sum, item) => sum + item.quantity, 0);
-  }, 0);
+  const totalCustomers = containers.reduce((acc, c) => acc + c.items.length, 0);
+  const totalCbm = containers.reduce(
+    (acc, c) => acc + c.items.reduce((sum, item) => sum + item.cbm, 0),
+    0
+  );
 
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
-      <div className="max-w-6xl mx-auto px-3 sm:px-6">
-        
-        {/* Main Nav Bar Row */}
-        <div className="flex items-center justify-between h-14 sm:h-16 md:h-18 gap-2">
-          
+      <div className="max-w-7xl mx-auto px-3 sm:px-6">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
           {/* Brand - Deep Down Logistics */}
-          <button 
+          <button
             type="button"
             onClick={onGoHome}
             className="flex items-center space-x-2 sm:space-x-3 text-left group select-none min-w-0 shrink"
@@ -57,22 +56,24 @@ export function SimpleNavbar({
                     ← {selectedContainerName}
                   </span>
                 ) : (
-                  <span>{containers.length} Containers · {totalGoodsAll} Goods</span>
+                  <span>
+                    {containers.length} Containers · {totalCustomers} Customers · {totalCbm.toFixed(1)} CBM
+                  </span>
                 )}
               </p>
             </div>
           </button>
 
           {/* Search box for tablet and desktop */}
-          <div className="flex-1 max-w-xs hidden md:block">
+          <div className="flex-1 max-w-sm hidden md:block">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Find item or container..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all"
+                placeholder="Search customer, phone, receiver, warehouse..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-8 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all"
               />
               {searchQuery && (
                 <button
@@ -88,7 +89,6 @@ export function SimpleNavbar({
 
           {/* Right Action buttons */}
           <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
-            {/* Desktop Export All Excel & PDF */}
             <button
               type="button"
               onClick={() => exportAllContainersToExcel(containers)}
@@ -121,16 +121,15 @@ export function SimpleNavbar({
                 <Download className="w-4 h-4 text-slate-600" />
               </button>
 
-              {/* Mobile Export Dropdown Popover */}
               {showMobileExportMenu && (
                 <>
-                  <div 
+                  <div
                     className="fixed inset-0 z-40 bg-slate-900/20"
                     onClick={() => setShowMobileExportMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-1 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-1 divide-y divide-slate-100">
                     <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      Export All Containers
+                      Export All (10 Fields)
                     </div>
                     <button
                       type="button"
@@ -138,7 +137,7 @@ export function SimpleNavbar({
                         exportAllContainersToExcel(containers);
                         setShowMobileExportMenu(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 flex items-center space-x-2"
+                      className="w-full text-left px-3 py-2.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 flex items-center space-x-2"
                     >
                       <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                       <span>Export Excel (.xlsx)</span>
@@ -149,7 +148,7 @@ export function SimpleNavbar({
                         exportAllContainersToPdf(containers);
                         setShowMobileExportMenu(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 flex items-center space-x-2"
+                      className="w-full text-left px-3 py-2.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 flex items-center space-x-2"
                     >
                       <FileText className="w-4 h-4 text-rose-600" />
                       <span>Export PDF Report</span>
@@ -170,21 +169,20 @@ export function SimpleNavbar({
               <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
 
-            {/* Friendly Add Container button */}
+            {/* Add Container button */}
             <button
               type="button"
               onClick={onOpenAddContainer}
               className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors shrink-0 min-h-[36px] sm:min-h-[40px]"
             >
               <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
-              <span className="hidden xs:inline sm:inline">+ Add Container</span>
-              <span className="xs:hidden sm:hidden">+ Container</span>
+              <span className="hidden sm:inline">+ Add Container</span>
+              <span className="sm:hidden">+ Container</span>
             </button>
           </div>
-
         </div>
 
-        {/* Mobile / Tablet Search Input Row */}
+        {/* Mobile Search Row */}
         <div className="md:hidden pb-2.5 pt-1">
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -192,7 +190,7 @@ export function SimpleNavbar({
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Find item or container..."
+              placeholder="Search container, customer, phone, receiver..."
               className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-base sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-slate-900 transition-all min-h-[42px]"
             />
             {searchQuery && (
@@ -206,7 +204,6 @@ export function SimpleNavbar({
             )}
           </div>
         </div>
-
       </div>
     </header>
   );
