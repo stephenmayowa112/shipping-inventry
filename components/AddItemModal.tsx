@@ -19,13 +19,6 @@ interface AddItemModalProps {
   onClose: () => void;
 }
 
-const WAREHOUSE_PRESETS = [
-  'Warehouse A - Main Yard',
-  'Warehouse B - Annex',
-  'Apapa Terminal Warehouse',
-  'Ikeja Yard Warehouse',
-];
-
 export function AddItemModal({
   isOpen,
   containerId,
@@ -69,7 +62,7 @@ export function AddItemModal({
   );
   // 10. Warehouse
   const [warehouse, setWarehouse] = useState(
-    editingItem?.warehouse || defaultWarehouse || 'Warehouse A - Main Yard'
+    editingItem?.warehouse || defaultWarehouse || ''
   );
   // Compulsory Staff Name
   const [personName, setPersonName] = useState(() => getLastOperatorName());
@@ -414,25 +407,9 @@ export function AddItemModal({
               required
               value={warehouse}
               onChange={(e) => setWarehouse(e.target.value)}
-              placeholder="e.g. Warehouse A - Main Yard"
+              placeholder="Enter warehouse name or location..."
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base sm:text-sm font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900 min-h-[46px]"
             />
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {WAREHOUSE_PRESETS.map((w) => (
-                <button
-                  type="button"
-                  key={w}
-                  onClick={() => setWarehouse(w)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
-                    warehouse === w
-                      ? 'bg-slate-900 text-white font-bold'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {w}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Compulsory Staff Name */}

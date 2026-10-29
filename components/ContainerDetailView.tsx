@@ -58,9 +58,7 @@ export function ContainerDetailView({
   // Edit container title/warehouse/note state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editName, setEditName] = useState(container.name);
-  const [editWarehouse, setEditWarehouse] = useState(
-    container.warehouse || 'Warehouse A - Main Yard'
-  );
+  const [editWarehouse, setEditWarehouse] = useState(container.warehouse || '');
   const [editNote, setEditNote] = useState(container.note || '');
   const [editPersonName, setEditPersonName] = useState('');
 
@@ -162,9 +160,7 @@ export function ContainerDetailView({
                     type="button"
                     onClick={() => {
                       setEditName(container.name);
-                      setEditWarehouse(
-                        container.warehouse || 'Warehouse A - Main Yard'
-                      );
+                      setEditWarehouse(container.warehouse || '');
                       setEditNote(container.note || '');
                       setEditPersonName(
                         getLastOperatorName() || container.updatedBy || ''
@@ -182,7 +178,7 @@ export function ContainerDetailView({
                 <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs sm:text-sm text-slate-600">
                   <span className="flex items-center gap-1.5 font-semibold text-slate-800">
                     <Warehouse className="w-4 h-4 text-slate-500 shrink-0" />
-                    <span>10. Warehouse: {container.warehouse || 'Main Warehouse'}</span>
+                    <span>10. Warehouse: {container.warehouse || 'Not Specified'}</span>
                   </span>
                   {container.note && (
                     <span className="text-slate-500">· {container.note}</span>
@@ -850,7 +846,7 @@ export function ContainerDetailView({
           isOpen={isAddItemOpen}
           containerId={container.id}
           containerName={container.name}
-          defaultWarehouse={container.warehouse || 'Warehouse A - Main Yard'}
+          defaultWarehouse={container.warehouse || ''}
           editingItem={editingItem}
           onClose={() => {
             setIsAddItemOpen(false);

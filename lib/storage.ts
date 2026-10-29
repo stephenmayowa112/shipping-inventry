@@ -2,7 +2,7 @@
 
 import { Container, ContainerItem, ItemHistory, TakenStatus } from './types';
 
-const STORAGE_KEY = 'deep_down_containers_v4';
+const STORAGE_KEY = 'deep_down_containers_handover_v1';
 const OPERATOR_KEY = 'deep_down_operator_name';
 export const STORAGE_UPDATE_EVENT = 'deep_down_containers_updated';
 
@@ -37,9 +37,9 @@ export function saveLastOperatorName(name: string): void {
 export const INITIAL_CONTAINERS: Container[] = [
   {
     id: 'cnt-1',
-    name: 'Container 1 (MSKU-904821 - 40ft)',
-    warehouse: 'Warehouse A - Main Yard',
-    note: 'Arrived Monday morning — General Merchandise & Electronics',
+    name: 'Container 1',
+    warehouse: 'Main Warehouse',
+    note: 'General Merchandise & Electronics',
     createdBy: 'Stephen Mayowa',
     updatedBy: 'Stephen Mayowa',
     createdAt: '2026-10-20T08:00:00Z',
@@ -48,7 +48,7 @@ export const INITIAL_CONTAINERS: Container[] = [
       {
         id: 'itm-101',
         containerId: 'cnt-1',
-        containerName: 'Container 1 (MSKU-904821 - 40ft)',
+        containerName: 'Container 1',
         name: 'Alhaji Musa Ibrahim',
         phone: '0803 452 8910',
         cbm: 14.5,
@@ -60,7 +60,7 @@ export const INITIAL_CONTAINERS: Container[] = [
         receiverName: 'Suleiman Musa',
         receiverPhone: '0806 112 3344',
         receiverDate: '2026-10-27',
-        warehouse: 'Warehouse A - Main Yard',
+        warehouse: 'Main Warehouse',
         addedDate: '2026-10-20',
         lastUpdated: '2026-10-27 15:20',
         addedBy: 'Stephen Mayowa',
@@ -69,7 +69,7 @@ export const INITIAL_CONTAINERS: Container[] = [
       {
         id: 'itm-102',
         containerId: 'cnt-1',
-        containerName: 'Container 1 (MSKU-904821 - 40ft)',
+        containerName: 'Container 1',
         name: 'Chinedu Okafor Ventures',
         phone: '0802 998 1122',
         cbm: 8.2,
@@ -81,7 +81,7 @@ export const INITIAL_CONTAINERS: Container[] = [
         receiverName: 'Emeka Okafor',
         receiverPhone: '0813 400 7788',
         receiverDate: '2026-10-28',
-        warehouse: 'Warehouse A - Main Yard',
+        warehouse: 'Main Warehouse',
         addedDate: '2026-10-20',
         lastUpdated: '2026-10-28 11:45',
         addedBy: 'Stephen Mayowa',
@@ -90,7 +90,7 @@ export const INITIAL_CONTAINERS: Container[] = [
       {
         id: 'itm-103',
         containerId: 'cnt-1',
-        containerName: 'Container 1 (MSKU-904821 - 40ft)',
+        containerName: 'Container 1',
         name: 'Mrs. Folake Adeyemi',
         phone: '0706 554 3219',
         cbm: 5.0,
@@ -102,7 +102,7 @@ export const INITIAL_CONTAINERS: Container[] = [
         receiverName: '',
         receiverPhone: '',
         receiverDate: '',
-        warehouse: 'Warehouse A - Main Yard',
+        warehouse: 'Main Warehouse',
         addedDate: '2026-10-21',
         lastUpdated: '2026-10-21 09:30',
         addedBy: 'Stephen Mayowa',
@@ -113,7 +113,7 @@ export const INITIAL_CONTAINERS: Container[] = [
       {
         id: 'hist-103',
         containerId: 'cnt-1',
-        containerName: 'Container 1 (MSKU-904821 - 40ft)',
+        containerName: 'Container 1',
         itemId: 'itm-102',
         itemName: 'Chinedu Okafor Ventures',
         action: 'collected',
@@ -124,7 +124,7 @@ export const INITIAL_CONTAINERS: Container[] = [
       {
         id: 'hist-102',
         containerId: 'cnt-1',
-        containerName: 'Container 1 (MSKU-904821 - 40ft)',
+        containerName: 'Container 1',
         itemId: 'itm-101',
         itemName: 'Alhaji Musa Ibrahim',
         action: 'payment',
@@ -136,8 +136,8 @@ export const INITIAL_CONTAINERS: Container[] = [
   },
   {
     id: 'cnt-2',
-    name: 'Container 2 (CMAU-441092 - 40ft)',
-    warehouse: 'Warehouse B - Annex',
+    name: 'Container 2',
+    warehouse: 'Main Warehouse',
     note: 'Hardware, Auto Parts & Building Materials',
     createdBy: 'Michael Ade',
     updatedBy: 'Michael Ade',
@@ -147,7 +147,7 @@ export const INITIAL_CONTAINERS: Container[] = [
       {
         id: 'itm-201',
         containerId: 'cnt-2',
-        containerName: 'Container 2 (CMAU-441092 - 40ft)',
+        containerName: 'Container 2',
         name: 'Kazeem Auto Spares Ltd',
         phone: '0809 334 5566',
         cbm: 22.0,
@@ -159,7 +159,7 @@ export const INITIAL_CONTAINERS: Container[] = [
         receiverName: 'Tunde Bakare',
         receiverPhone: '0805 667 8899',
         receiverDate: '2026-10-28',
-        warehouse: 'Warehouse B - Annex',
+        warehouse: 'Main Warehouse',
         addedDate: '2026-10-23',
         lastUpdated: '2026-10-28 16:10',
         addedBy: 'Michael Ade',
@@ -168,7 +168,7 @@ export const INITIAL_CONTAINERS: Container[] = [
       {
         id: 'itm-202',
         containerId: 'cnt-2',
-        containerName: 'Container 2 (CMAU-441092 - 40ft)',
+        containerName: 'Container 2',
         name: 'Grace Hardware & Tools',
         phone: '0818 223 9090',
         cbm: 6.5,
@@ -180,7 +180,7 @@ export const INITIAL_CONTAINERS: Container[] = [
         receiverName: '',
         receiverPhone: '',
         receiverDate: '',
-        warehouse: 'Warehouse B - Annex',
+        warehouse: 'Main Warehouse',
         addedDate: '2026-10-24',
         lastUpdated: '2026-10-24 12:00',
         addedBy: 'Michael Ade',
@@ -191,7 +191,7 @@ export const INITIAL_CONTAINERS: Container[] = [
       {
         id: 'hist-201',
         containerId: 'cnt-2',
-        containerName: 'Container 2 (CMAU-441092 - 40ft)',
+        containerName: 'Container 2',
         itemId: 'itm-201',
         itemName: 'Kazeem Auto Spares Ltd',
         action: 'collected',
@@ -273,7 +273,7 @@ export function addContainer(
   saveLastOperatorName(person);
 
   const cleanName = name.trim() || `Container ${containers.length + 1}`;
-  const cleanWarehouse = warehouse.trim() || 'Main Warehouse';
+  const cleanWarehouse = warehouse.trim();
   const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
 
   const newContainer: Container = {
@@ -291,7 +291,9 @@ export function addContainer(
         containerName: cleanName,
         itemName: 'Container Registered',
         action: 'added',
-        summary: `Container "${cleanName}" registered at ${cleanWarehouse}`,
+        summary: cleanWarehouse
+          ? `Container "${cleanName}" registered at ${cleanWarehouse}`
+          : `Container "${cleanName}" registered`,
         personName: person,
         date: nowStr,
       },
@@ -320,7 +322,7 @@ export function updateContainer(
     if (c.id !== id) return c;
 
     const cleanName = name.trim() || c.name;
-    const cleanWarehouse = warehouse.trim() || c.warehouse;
+    const cleanWarehouse = warehouse.trim();
 
     const updatedItems = c.items.map((item) => ({
       ...item,
@@ -333,7 +335,9 @@ export function updateContainer(
       containerName: cleanName,
       itemName: 'Container Details',
       action: 'updated',
-      summary: `Updated container name to "${cleanName}" • Warehouse: "${cleanWarehouse}"`,
+      summary: cleanWarehouse
+        ? `Updated container name to "${cleanName}" • Warehouse: "${cleanWarehouse}"`
+        : `Updated container name to "${cleanName}"`,
       personName: person,
       date: nowStr,
     };
@@ -381,7 +385,10 @@ export function addCargoItem(containerId: string, input: CargoInputData): void {
 
   const amount = Math.max(0, Number(input.amount) || 0);
   const paid = Math.max(0, Number(input.paid) || 0);
-  const credit = input.credit !== undefined ? Math.max(0, Number(input.credit)) : Math.max(0, amount - paid);
+  const credit =
+    input.credit !== undefined
+      ? Math.max(0, Number(input.credit))
+      : Math.max(0, amount - paid);
   const cbm = Math.max(0, Number(input.cbm) || 0);
   const takenText = input.taken.trim() || input.takenStatus;
 
@@ -403,7 +410,7 @@ export function addCargoItem(containerId: string, input: CargoInputData): void {
       receiverName: input.receiverName.trim(),
       receiverPhone: input.receiverPhone.trim(),
       receiverDate: input.receiverDate.trim(),
-      warehouse: input.warehouse.trim() || c.warehouse,
+      warehouse: input.warehouse.trim() || c.warehouse || '',
       addedDate: nowStr.split(' ')[0],
       lastUpdated: nowStr,
       addedBy: person,
@@ -421,7 +428,7 @@ export function addCargoItem(containerId: string, input: CargoInputData): void {
       itemId: newItem.id,
       itemName: newItem.name,
       action: 'added',
-      summary: `Added customer record • CBM: ${cbm} • Amount: ${formatMoney(amount)} • Paid: ${formatMoney(paid)} • Credit: ${formatMoney(credit)} • Taken: ${takenText} • Warehouse: ${newItem.warehouse}${receiverSummary}`,
+      summary: `Added customer record • CBM: ${cbm} • Amount: ${formatMoney(amount)} • Paid: ${formatMoney(paid)} • Credit: ${formatMoney(credit)} • Taken: ${takenText}${newItem.warehouse ? ` • Warehouse: ${newItem.warehouse}` : ''}${receiverSummary}`,
       personName: person,
       date: nowStr,
     };
@@ -457,19 +464,37 @@ export function updateCargoItem(
     const existing = c.items.find((i) => i.id === itemId);
     if (!existing) return c;
 
-    const amount = updates.amount !== undefined ? Math.max(0, Number(updates.amount) || 0) : existing.amount;
-    const paid = updates.paid !== undefined ? Math.max(0, Number(updates.paid) || 0) : existing.paid;
+    const amount =
+      updates.amount !== undefined
+        ? Math.max(0, Number(updates.amount) || 0)
+        : existing.amount;
+    const paid =
+      updates.paid !== undefined
+        ? Math.max(0, Number(updates.paid) || 0)
+        : existing.paid;
     const credit =
       updates.credit !== undefined
         ? Math.max(0, Number(updates.credit))
         : Math.max(0, amount - paid);
-    const cbm = updates.cbm !== undefined ? Math.max(0, Number(updates.cbm) || 0) : existing.cbm;
-    const takenStatus = updates.takenStatus !== undefined ? updates.takenStatus : existing.takenStatus;
-    const taken = updates.taken !== undefined ? updates.taken.trim() || takenStatus : existing.taken;
+    const cbm =
+      updates.cbm !== undefined
+        ? Math.max(0, Number(updates.cbm) || 0)
+        : existing.cbm;
+    const takenStatus =
+      updates.takenStatus !== undefined
+        ? updates.takenStatus
+        : existing.takenStatus;
+    const taken =
+      updates.taken !== undefined
+        ? updates.taken.trim() || takenStatus
+        : existing.taken;
 
     const updatedItem: ContainerItem = {
       ...existing,
-      name: updates.name !== undefined ? updates.name.trim() || existing.name : existing.name,
+      name:
+        updates.name !== undefined
+          ? updates.name.trim() || existing.name
+          : existing.name,
       phone: updates.phone !== undefined ? updates.phone.trim() : existing.phone,
       cbm,
       amount,
@@ -477,15 +502,29 @@ export function updateCargoItem(
       taken,
       paid,
       credit,
-      receiverName: updates.receiverName !== undefined ? updates.receiverName.trim() : existing.receiverName,
-      receiverPhone: updates.receiverPhone !== undefined ? updates.receiverPhone.trim() : existing.receiverPhone,
-      receiverDate: updates.receiverDate !== undefined ? updates.receiverDate.trim() : existing.receiverDate,
-      warehouse: updates.warehouse !== undefined ? updates.warehouse.trim() || c.warehouse : existing.warehouse,
+      receiverName:
+        updates.receiverName !== undefined
+          ? updates.receiverName.trim()
+          : existing.receiverName,
+      receiverPhone:
+        updates.receiverPhone !== undefined
+          ? updates.receiverPhone.trim()
+          : existing.receiverPhone,
+      receiverDate:
+        updates.receiverDate !== undefined
+          ? updates.receiverDate.trim()
+          : existing.receiverDate,
+      warehouse:
+        updates.warehouse !== undefined
+          ? updates.warehouse.trim()
+          : existing.warehouse,
       lastUpdated: nowStr,
       lastUpdatedBy: person,
     };
 
-    const updatedItems = c.items.map((i) => (i.id === itemId ? updatedItem : i));
+    const updatedItems = c.items.map((i) =>
+      i.id === itemId ? updatedItem : i
+    );
 
     let summary = updates.changeNote || '';
     if (!summary) {
@@ -503,10 +542,16 @@ export function updateCargoItem(
           `Financials: Amount ${formatMoney(updatedItem.amount)}, Paid ${formatMoney(updatedItem.paid)}, Credit ${formatMoney(updatedItem.credit)}`
         );
       }
-      if (updates.warehouse !== undefined && updates.warehouse !== existing.warehouse) {
+      if (
+        updates.warehouse !== undefined &&
+        updates.warehouse !== existing.warehouse
+      ) {
         parts.push(`Warehouse: ${updatedItem.warehouse}`);
       }
-      summary = parts.length > 0 ? parts.join(' • ') : `Updated record details for ${updatedItem.name}`;
+      summary =
+        parts.length > 0
+          ? parts.join(' • ')
+          : `Updated record details for ${updatedItem.name}`;
     }
 
     const historyEntry: ItemHistory = {

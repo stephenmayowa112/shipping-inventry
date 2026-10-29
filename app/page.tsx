@@ -4,10 +4,10 @@ import React, { useState, useSyncExternalStore } from 'react';
 import { 
   getContainers, 
   resetToDemoData, 
+  clearAllContainers,
   subscribeToStorage, 
   INITIAL_CONTAINERS 
 } from '@/lib/storage';
-import { Container } from '@/lib/types';
 import { SimpleNavbar } from '@/components/SimpleNavbar';
 import { ContainerList } from '@/components/ContainerList';
 import { ContainerDetailView } from '@/components/ContainerDetailView';
@@ -25,15 +25,24 @@ export default function Home() {
   const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddContainerOpen, setIsAddContainerOpen] = useState(false);
-  const [showResetNotice, setShowResetNotice] = useState(false);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   // Find currently selected container
   const selectedContainer = containers.find(c => c.id === selectedContainerId) || null;
 
   const handleResetDemo = () => {
     resetToDemoData();
-    setShowResetNotice(true);
-    setTimeout(() => setShowResetNotice(false), 3000);
+    setNoticeMessage('Clean production template restored (Container 1 & Container 2).');
+    setTimeout(() => setNoticeMessage(null), 3500);
+  };
+
+  const handleClearAll = () => {
+    if (window.confirm('Clear all containers to prepare a blank slate for company handover?')) {
+      clearAllContainers();
+      setSelectedContainerId(null);
+      setNoticeMessage('All containers cleared. Ready for fresh company data entry.');
+      setTimeout(() => setNoticeMessage(null), 3500);
+    }
   };
 
   const handleContainerCreated = (newId: string) => {
@@ -57,12 +66,12 @@ export default function Home() {
       {/* Main Container Work Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8">
         
-        {/* Reset feedback message */}
-        {showResetNotice && (
+        {/* Notice feedback message */}
+        {noticeMessage && (
           <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-between shadow-xs">
-            <span>Sample local business containers and goods restored successfully.</span>
+            <span>{noticeMessage}</span>
             <button 
-              onClick={() => setShowResetNotice(false)} 
+              onClick={() => setNoticeMessage(null)} 
               className="text-emerald-700 font-bold hover:underline"
             >
               Dismiss
@@ -89,21 +98,30 @@ export default function Home() {
 
       {/* Minimalist Footer */}
       <footer className="border-t border-slate-200 bg-white py-4 text-xs text-slate-500">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
           <div className="flex items-center space-x-2">
             <span className="font-bold text-slate-800">Deep Down Logistics</span>
             <span className="text-slate-300">•</span>
-            <span>Container Inventory & Goods Tracking</span>
+            <span>Container & Cargo Management System</span>
           </div>
 
-          <div className="flex items-center space-x-3 text-[11px]">
-            <span>Fast Excel (.xlsx) & PDF Export</span>
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 text-[11px]">
+            <span>Production Handover Ready</span>
+            <span className="text-slate-300">•</span>
+            <button 
+              onClick={handleClearAll}
+              className="text-slate-600 hover:text-rose-600 hover:underline font-semibold"
+              title="Clear all records to start completely blank for company handover"
+            >
+              Clear for Handover
+            </button>
             <span className="text-slate-300">•</span>
             <button 
               onClick={handleResetDemo}
               className="text-blue-600 hover:text-blue-800 hover:underline font-semibold"
+              title="Load clean baseline template"
             >
-              Restore Sample Data
+              Reset Template
             </button>
           </div>
         </div>
