@@ -87,16 +87,102 @@ const manifestResponseSchema = {
   required: ['rows'],
 };
 
+const warehouseResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    rows: {
+      type: Type.ARRAY,
+      description: 'List of warehouse inventory records extracted from the uploaded sheet.',
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          goodsInStock: {
+            type: Type.STRING,
+            description: '1. Goods in-stock (description and quantity currently in stock).',
+          },
+          goodsArrivalDate: {
+            type: Type.STRING,
+            description: '2. Goods arrival date in YYYY-MM-DD format.',
+          },
+          containerName: {
+            type: Type.STRING,
+            description: '3a. Container name or number the goods were taken out of.',
+          },
+          takeoutFromContainer: {
+            type: Type.STRING,
+            description: '3b. Takeout from container (goods offloaded/taken out of that container).',
+          },
+          takeoutFromWarehouse: {
+            type: Type.STRING,
+            description: '4. Takeout from warehouse (goods dispatched/removed from warehouse).',
+          },
+          warehouseName: {
+            type: Type.STRING,
+            description: '5a. Name of warehouse.',
+          },
+          offloaderName: {
+            type: Type.STRING,
+            description: '5b. Name of container offloader (person who offloaded the container).',
+          },
+          personName: {
+            type: Type.STRING,
+            description: '6. Name of person (staff recording or responsible).',
+          },
+          confirmationStatus: {
+            type: Type.STRING,
+            description: '7. Confirmation status: "Confirmed" or "Pending".',
+          },
+          goodsCondition: {
+            type: Type.STRING,
+            description: '8a. Goods condition: "Good", "Damaged", or "Part Damaged".',
+          },
+          conditionDetails: {
+            type: Type.STRING,
+            description: '8b. Details about good or damaged condition.',
+          },
+          unaccountedDetails: {
+            type: Type.STRING,
+            description: '9. Unaccounted / missing goods in that container (or "None (0 Missing)").',
+          },
+          credit: {
+            type: Type.NUMBER,
+            description: '10. Credit amount for that container as a clean number.',
+          },
+        },
+        required: ['goodsInStock'],
+      },
+    },
+  },
+  required: ['rows'],
+};
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { textContent, fileBase64, mimeType } = body as {
+    const { textContent, fileBase64, mimeType, mode } = body as {
       textContent?: string;
       fileBase64?: string;
       mimeType?: string;
+      mode?: 'customer' | 'warehouse';
     };
 
-    const systemInstruction = `You are a logistics manifest extraction assistant for Deep Down Logistics.
+    const isWarehouse = mode === 'warehouse';
+
+    const systemInstruction = isWarehouse
+      ? `You are a warehouse inventory extraction assistant for Deep Down Logistics.
+Extract all warehouse inventory rows into the 10 standard warehouse fields:
+1. Goods in-stock (goodsInStock)
+2. Goods arrival date (goodsArrivalDate in YYYY-MM-DD)
+3. Takeout from container (containerName and takeoutFromContainer)
+4. Takeout from warehouse (takeoutFromWarehouse)
+5. Name of warehouse / container offloader (warehouseName and offloaderName)
+6. Name of person (personName)
+7. Confirmation (confirmationStatus: "Confirmed" | "Pending")
+8. Goods condition (goodsCondition: "Good" | "Damaged" | "Part Damaged", and conditionDetails)
+9. Unaccounted / missing goods (unaccountedDetails, default to "None (0 Missing)" if none)
+10. Credit (credit as a clean number without currency symbols or commas)
+Ignore empty rows or grand totals. Return clean JSON.`
+      : `You are a logistics manifest extraction assistant for Deep Down Logistics.
 Extract all customer cargo rows from the provided manifest into the 10 standard fields:
 1. Container (containerName)
 2. Name (Customer / Cargo Owner Name)
@@ -127,11 +213,11 @@ Ignore empty rows, subtotals, or grand total summary rows. Return clean structur
 
     if (textContent) {
       contents.push(
-        `Extract all manifest customer cargo records from the following manifest data:\n\n${textContent}`
+        `Extract all ${isWarehouse ? 'warehouse inventory' : 'manifest customer cargo'} records from the following data:\n\n${textContent}`
       );
     } else {
       contents.push(
-        'Extract all manifest customer cargo records from this uploaded manifest document.'
+        `Extract all ${isWarehouse ? 'warehouse inventory' : 'manifest customer cargo'} records from this uploaded document.`
       );
     }
 
@@ -141,7 +227,9 @@ Ignore empty rows, subtotals, or grand total summary rows. Return clean structur
       config: {
         systemInstruction,
         responseMimeType: 'application/json',
-        responseSchema: manifestResponseSchema,
+        responseSchema: isWarehouse
+          ? warehouseResponseSchema
+          : manifestResponseSchema,
       },
     });
 
@@ -150,7 +238,7 @@ Ignore empty rows, subtotals, or grand total summary rows. Return clean structur
     return NextResponse.json(parsed);
   } catch (err: unknown) {
     const message =
-      err instanceof Error ? err.message : 'Failed to parse manifest file.';
+      err instanceof Error ? err.message : 'Failed to parse uploaded file.';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -58,3 +58,54 @@ export interface Container {
   createdAt: string;
   updatedAt: string;
 }
+
+// ==========================================
+// WAREHOUSE INVENTORY TYPES (10 FIELDS)
+// ==========================================
+
+export type GoodsCondition = 'Good' | 'Damaged' | 'Part Damaged';
+export type ConfirmationStatus = 'Confirmed' | 'Pending';
+
+export interface WarehouseRecord {
+  id: string;
+  // 1. Goods in-stock
+  goodsInStock: string;
+  // 2. Goods arrival (date)
+  goodsArrivalDate: string;
+  // 3. Takeout from container (what goods were taken out of which container)
+  containerName: string;
+  takeoutFromContainer: string;
+  // 4. Takeout from warehouse (goods dispatched/removed from warehouse)
+  takeoutFromWarehouse: string;
+  // 5. Name of warehouse / container offloader
+  warehouseName: string;
+  offloaderName: string;
+  // 6. Name of person (staff recording/updating)
+  personName: string;
+  // 7. Confirmation
+  confirmationStatus: ConfirmationStatus;
+  confirmationNote: string;
+  // 8. Goods condition (good / damaged)
+  goodsCondition: GoodsCondition;
+  conditionDetails: string;
+  // 9. Unaccounted (missing goods in that particular container)
+  hasUnaccounted: boolean;
+  unaccountedDetails: string;
+  // 10. Credit (credit for that container)
+  credit: number;
+
+  // Audit metadata
+  createdAt: string;
+  updatedAt: string;
+  lastUpdatedBy: string;
+}
+
+export interface WarehouseHistory {
+  id: string;
+  recordId: string;
+  containerName: string;
+  action: 'added' | 'updated' | 'confirmed' | 'deleted';
+  summary: string;
+  personName: string;
+  date: string;
+}

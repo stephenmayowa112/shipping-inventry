@@ -1,8 +1,19 @@
 'use client';
 
-import { Container, ContainerItem, ItemHistory, TakenStatus } from './types';
+import {
+  Container,
+  ContainerItem,
+  ItemHistory,
+  TakenStatus,
+  WarehouseRecord,
+  WarehouseHistory,
+  GoodsCondition,
+  ConfirmationStatus,
+} from './types';
 
 const STORAGE_KEY = 'deep_down_containers_handover_v1';
+const WAREHOUSE_STORAGE_KEY = 'deep_down_warehouse_records_v1';
+const WAREHOUSE_HISTORY_KEY = 'deep_down_warehouse_history_v1';
 const OPERATOR_KEY = 'deep_down_operator_name';
 export const STORAGE_UPDATE_EVENT = 'deep_down_containers_updated';
 
@@ -812,11 +823,462 @@ export function importManifestRecords(
   return primaryContainerId;
 }
 
+// ==========================================
+// WAREHOUSE INVENTORY STORAGE & CRUD
+// ==========================================
+
+export const INITIAL_WAREHOUSE_RECORDS: WarehouseRecord[] = [
+  {
+    id: 'wh-rec-1',
+    goodsInStock: '38 Boxes & 20 Bales in Stock',
+    goodsArrivalDate: '2026-10-20',
+    containerName: 'Container 1',
+    takeoutFromContainer: '95 Total Packages Offloaded (45 Cartons, 30 Boxes, 20 Bales)',
+    takeoutFromWarehouse: '57 Packages Dispatched (45 Cartons + 12 Boxes Taken)',
+    warehouseName: 'Main Warehouse',
+    offloaderName: 'Ibrahim Danjuma',
+    personName: 'Stephen Mayowa',
+    confirmationStatus: 'Confirmed',
+    confirmationNote: 'Tally sheet verified after offloading',
+    goodsCondition: 'Good',
+    conditionDetails: 'All cartons and bales arrived intact in good condition',
+    hasUnaccounted: false,
+    unaccountedDetails: 'None (0 Missing)',
+    credit: 620000,
+    createdAt: '2026-10-20T09:00:00Z',
+    updatedAt: '2026-10-28T11:45:00Z',
+    lastUpdatedBy: 'Michael Ade',
+  },
+  {
+    id: 'wh-rec-2',
+    goodsInStock: '10 Pallets Auto Parts & 18 Crates Hardware in Stock',
+    goodsArrivalDate: '2026-10-23',
+    containerName: 'Container 2',
+    takeoutFromContainer: '43 Total Units Offloaded (25 Pallets, 18 Crates)',
+    takeoutFromWarehouse: '15 Pallets Dispatched to Receiver',
+    warehouseName: 'Main Warehouse',
+    offloaderName: 'Sunday Eze',
+    personName: 'Michael Ade',
+    confirmationStatus: 'Pending',
+    confirmationNote: 'Awaiting final inspection of 1 missing carton claim',
+    goodsCondition: 'Part Damaged',
+    conditionDetails: '2 outer wooden crates slightly dented during transit; remaining 41 units in good condition',
+    hasUnaccounted: true,
+    unaccountedDetails: '1 Small Accessory Carton Unaccounted',
+    credit: 700000,
+    createdAt: '2026-10-23T11:00:00Z',
+    updatedAt: '2026-10-28T16:15:00Z',
+    lastUpdatedBy: 'Michael Ade',
+  },
+];
+
+export const INITIAL_WAREHOUSE_HISTORY: WarehouseHistory[] = [
+  {
+    id: 'wh-hist-2',
+    recordId: 'wh-rec-2',
+    containerName: 'Container 2',
+    action: 'updated',
+    summary:
+      'Updated Takeout from Warehouse to "15 Pallets Dispatched to Receiver" • Condition: Part Damaged • Unaccounted: 1 Small Accessory Carton Unaccounted • Credit: 700,000',
+    personName: 'Michael Ade',
+    date: '2026-10-28 16:15',
+  },
+  {
+    id: 'wh-hist-1',
+    recordId: 'wh-rec-1',
+    containerName: 'Container 1',
+    action: 'confirmed',
+    summary:
+      'Confirmed warehouse tally for Container 1 • Offloader: Ibrahim Danjuma • Goods Condition: Good • Unaccounted: None • Credit: 620,000',
+    personName: 'Stephen Mayowa',
+    date: '2026-10-27 15:30',
+  },
+];
+
+let cachedWarehouseRecords: WarehouseRecord[] | null = null;
+let cachedWarehouseRaw: string | null = null;
+let cachedWarehouseHistory: WarehouseHistory[] | null = null;
+let cachedWarehouseHistoryRaw: string | null = null;
+
+function saveWarehouseRecords(records: WarehouseRecord[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const serialized = JSON.stringify(records);
+    window.localStorage.setItem(WAREHOUSE_STORAGE_KEY, serialized);
+    cachedWarehouseRaw = serialized;
+    cachedWarehouseRecords = records;
+    dispatchUpdate();
+  } catch (err) {
+    console.error('Failed to save warehouse records:', err);
+  }
+}
+
+function saveWarehouseHistory(history: WarehouseHistory[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const serialized = JSON.stringify(history);
+    window.localStorage.setItem(WAREHOUSE_HISTORY_KEY, serialized);
+    cachedWarehouseHistoryRaw = serialized;
+    cachedWarehouseHistory = history;
+    dispatchUpdate();
+  } catch (err) {
+    console.error('Failed to save warehouse history:', err);
+  }
+}
+
+export function getWarehouseRecords(): WarehouseRecord[] {
+  if (typeof window === 'undefined') return INITIAL_WAREHOUSE_RECORDS;
+  try {
+    const raw = window.localStorage.getItem(WAREHOUSE_STORAGE_KEY);
+    if (!raw) {
+      const serialized = JSON.stringify(INITIAL_WAREHOUSE_RECORDS);
+      window.localStorage.setItem(WAREHOUSE_STORAGE_KEY, serialized);
+      cachedWarehouseRaw = serialized;
+      cachedWarehouseRecords = INITIAL_WAREHOUSE_RECORDS;
+      return INITIAL_WAREHOUSE_RECORDS;
+    }
+    if (raw !== cachedWarehouseRaw || !cachedWarehouseRecords) {
+      cachedWarehouseRaw = raw;
+      const parsed = JSON.parse(raw);
+      cachedWarehouseRecords = Array.isArray(parsed)
+        ? parsed
+        : INITIAL_WAREHOUSE_RECORDS;
+    }
+  } catch {
+    cachedWarehouseRecords = INITIAL_WAREHOUSE_RECORDS;
+  }
+  return cachedWarehouseRecords || INITIAL_WAREHOUSE_RECORDS;
+}
+
+export function getWarehouseHistory(): WarehouseHistory[] {
+  if (typeof window === 'undefined') return INITIAL_WAREHOUSE_HISTORY;
+  try {
+    const raw = window.localStorage.getItem(WAREHOUSE_HISTORY_KEY);
+    if (!raw) {
+      const serialized = JSON.stringify(INITIAL_WAREHOUSE_HISTORY);
+      window.localStorage.setItem(WAREHOUSE_HISTORY_KEY, serialized);
+      cachedWarehouseHistoryRaw = serialized;
+      cachedWarehouseHistory = INITIAL_WAREHOUSE_HISTORY;
+      return INITIAL_WAREHOUSE_HISTORY;
+    }
+    if (raw !== cachedWarehouseHistoryRaw || !cachedWarehouseHistory) {
+      cachedWarehouseHistoryRaw = raw;
+      const parsed = JSON.parse(raw);
+      cachedWarehouseHistory = Array.isArray(parsed)
+        ? parsed
+        : INITIAL_WAREHOUSE_HISTORY;
+    }
+  } catch {
+    cachedWarehouseHistory = INITIAL_WAREHOUSE_HISTORY;
+  }
+  return cachedWarehouseHistory || INITIAL_WAREHOUSE_HISTORY;
+}
+
+export interface WarehouseRecordInput {
+  goodsInStock: string;
+  goodsArrivalDate: string;
+  containerName: string;
+  takeoutFromContainer: string;
+  takeoutFromWarehouse: string;
+  warehouseName: string;
+  offloaderName: string;
+  personName: string;
+  confirmationStatus: ConfirmationStatus;
+  confirmationNote?: string;
+  goodsCondition: GoodsCondition;
+  conditionDetails?: string;
+  hasUnaccounted: boolean;
+  unaccountedDetails?: string;
+  credit: number;
+}
+
+export function addWarehouseRecord(input: WarehouseRecordInput): WarehouseRecord {
+  const person = input.personName.trim() || 'Staff';
+  saveLastOperatorName(person);
+
+  const nowIso = new Date().toISOString();
+  const nowStr = nowIso.replace('T', ' ').substring(0, 16);
+  const dateOnly = nowStr.split(' ')[0];
+
+  const credit = Math.max(0, Number(input.credit) || 0);
+  const containerName = input.containerName.trim() || 'Container';
+  const unaccountedDetails = input.hasUnaccounted
+    ? (input.unaccountedDetails || '').trim() || 'Missing goods reported'
+    : (input.unaccountedDetails || '').trim() || 'None (0 Missing)';
+
+  const newRecord: WarehouseRecord = {
+    id: `wh-rec-${Date.now()}`,
+    goodsInStock: input.goodsInStock.trim() || 'In Stock',
+    goodsArrivalDate: input.goodsArrivalDate.trim() || dateOnly,
+    containerName,
+    takeoutFromContainer: input.takeoutFromContainer.trim() || '-',
+    takeoutFromWarehouse: input.takeoutFromWarehouse.trim() || 'None yet',
+    warehouseName: input.warehouseName.trim() || 'Main Warehouse',
+    offloaderName: input.offloaderName.trim() || '-',
+    personName: person,
+    confirmationStatus: input.confirmationStatus,
+    confirmationNote: (input.confirmationNote || '').trim(),
+    goodsCondition: input.goodsCondition,
+    conditionDetails:
+      (input.conditionDetails || '').trim() || input.goodsCondition,
+    hasUnaccounted: input.hasUnaccounted,
+    unaccountedDetails,
+    credit,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    lastUpdatedBy: person,
+  };
+
+  const records = [newRecord, ...getWarehouseRecords()];
+  saveWarehouseRecords(records);
+
+  const histEntry: WarehouseHistory = {
+    id: `wh-hist-${Date.now()}`,
+    recordId: newRecord.id,
+    containerName: newRecord.containerName,
+    action: 'added',
+    summary: `Added warehouse record for ${newRecord.containerName} • Stock: "${newRecord.goodsInStock}" • Offloader: ${newRecord.offloaderName} • Condition: ${newRecord.goodsCondition} • Unaccounted: ${newRecord.unaccountedDetails} • Credit: ${formatMoney(newRecord.credit)}`,
+    personName: person,
+    date: nowStr,
+  };
+  saveWarehouseHistory([histEntry, ...getWarehouseHistory()]);
+
+  return newRecord;
+}
+
+export function updateWarehouseRecord(
+  id: string,
+  updates: Partial<WarehouseRecordInput> & { personName: string; changeNote?: string }
+): void {
+  const person = updates.personName.trim() || 'Staff';
+  saveLastOperatorName(person);
+
+  const nowIso = new Date().toISOString();
+  const nowStr = nowIso.replace('T', ' ').substring(0, 16);
+
+  let updatedContainerName = 'Container';
+  let summaryText = updates.changeNote || '';
+
+  const records = getWarehouseRecords().map((rec) => {
+    if (rec.id !== id) return rec;
+
+    const hasUnaccounted =
+      updates.hasUnaccounted !== undefined
+        ? updates.hasUnaccounted
+        : rec.hasUnaccounted;
+
+    let unaccountedDetails = rec.unaccountedDetails;
+    if (updates.unaccountedDetails !== undefined) {
+      unaccountedDetails =
+        updates.unaccountedDetails.trim() ||
+        (hasUnaccounted ? 'Missing goods reported' : 'None (0 Missing)');
+    } else if (
+      updates.hasUnaccounted !== undefined &&
+      !updates.hasUnaccounted
+    ) {
+      unaccountedDetails = 'None (0 Missing)';
+    }
+
+    const updated: WarehouseRecord = {
+      ...rec,
+      goodsInStock:
+        updates.goodsInStock !== undefined
+          ? updates.goodsInStock.trim() || rec.goodsInStock
+          : rec.goodsInStock,
+      goodsArrivalDate:
+        updates.goodsArrivalDate !== undefined
+          ? updates.goodsArrivalDate.trim() || rec.goodsArrivalDate
+          : rec.goodsArrivalDate,
+      containerName:
+        updates.containerName !== undefined
+          ? updates.containerName.trim() || rec.containerName
+          : rec.containerName,
+      takeoutFromContainer:
+        updates.takeoutFromContainer !== undefined
+          ? updates.takeoutFromContainer.trim()
+          : rec.takeoutFromContainer,
+      takeoutFromWarehouse:
+        updates.takeoutFromWarehouse !== undefined
+          ? updates.takeoutFromWarehouse.trim()
+          : rec.takeoutFromWarehouse,
+      warehouseName:
+        updates.warehouseName !== undefined
+          ? updates.warehouseName.trim()
+          : rec.warehouseName,
+      offloaderName:
+        updates.offloaderName !== undefined
+          ? updates.offloaderName.trim()
+          : rec.offloaderName,
+      personName: person,
+      confirmationStatus:
+        updates.confirmationStatus !== undefined
+          ? updates.confirmationStatus
+          : rec.confirmationStatus,
+      confirmationNote:
+        updates.confirmationNote !== undefined
+          ? updates.confirmationNote.trim()
+          : rec.confirmationNote,
+      goodsCondition:
+        updates.goodsCondition !== undefined
+          ? updates.goodsCondition
+          : rec.goodsCondition,
+      conditionDetails:
+        updates.conditionDetails !== undefined
+          ? updates.conditionDetails.trim()
+          : rec.conditionDetails,
+      hasUnaccounted,
+      unaccountedDetails,
+      credit:
+        updates.credit !== undefined
+          ? Math.max(0, Number(updates.credit) || 0)
+          : rec.credit,
+      updatedAt: nowIso,
+      lastUpdatedBy: person,
+    };
+
+    updatedContainerName = updated.containerName;
+    if (!summaryText) {
+      summaryText = `Updated warehouse record (${updated.containerName}) • Stock: "${updated.goodsInStock}" • Warehouse Takeout: "${updated.takeoutFromWarehouse}" • Condition: ${updated.goodsCondition} • Confirmation: ${updated.confirmationStatus} • Unaccounted: ${updated.unaccountedDetails} • Credit: ${formatMoney(updated.credit)}`;
+    }
+
+    return updated;
+  });
+
+  saveWarehouseRecords(records);
+
+  const histEntry: WarehouseHistory = {
+    id: `wh-hist-${Date.now()}`,
+    recordId: id,
+    containerName: updatedContainerName,
+    action:
+      updates.confirmationStatus === 'Confirmed' ? 'confirmed' : 'updated',
+    summary: summaryText || `Updated warehouse record for ${updatedContainerName}`,
+    personName: person,
+    date: nowStr,
+  };
+  saveWarehouseHistory([histEntry, ...getWarehouseHistory()]);
+}
+
+export function deleteWarehouseRecord(id: string, personName = 'Staff'): void {
+  const existing = getWarehouseRecords().find((r) => r.id === id);
+  const filtered = getWarehouseRecords().filter((r) => r.id !== id);
+  saveWarehouseRecords(filtered);
+
+  if (existing) {
+    const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+    const histEntry: WarehouseHistory = {
+      id: `wh-hist-${Date.now()}`,
+      recordId: id,
+      containerName: existing.containerName,
+      action: 'deleted',
+      summary: `Removed warehouse record for ${existing.containerName} (Stock: ${existing.goodsInStock})`,
+      personName: personName.trim() || 'Staff',
+      date: nowStr,
+    };
+    saveWarehouseHistory([histEntry, ...getWarehouseHistory()]);
+  }
+}
+
+export function importWarehouseRecords(
+  rows: Partial<WarehouseRecordInput>[],
+  options: {
+    defaultWarehouseName: string;
+    personName: string;
+  }
+): number {
+  const person = options.personName.trim() || 'Staff';
+  saveLastOperatorName(person);
+
+  const nowIso = new Date().toISOString();
+  const nowStr = nowIso.replace('T', ' ').substring(0, 16);
+  const dateOnly = nowStr.split(' ')[0];
+
+  const validRows = rows.filter(
+    (r) =>
+      (r.goodsInStock && r.goodsInStock.trim()) ||
+      (r.containerName && r.containerName.trim()) ||
+      (r.takeoutFromContainer && r.takeoutFromContainer.trim())
+  );
+
+  if (validRows.length === 0) return 0;
+
+  const newRecords: WarehouseRecord[] = validRows.map((r, idx) => {
+    const hasUnaccounted =
+      Boolean(r.hasUnaccounted) ||
+      (Boolean(r.unaccountedDetails) &&
+        !/^(none|0|no|nil|-|false)$/i.test((r.unaccountedDetails || '').trim()));
+
+    const unaccountedDetails = (r.unaccountedDetails || '').trim() ||
+      (hasUnaccounted ? 'Missing goods reported' : 'None (0 Missing)');
+
+    const conditionRaw = (r.goodsCondition || 'Good').toString();
+    let goodsCondition: GoodsCondition = 'Good';
+    if (/part/i.test(conditionRaw) || /mixed/i.test(conditionRaw)) {
+      goodsCondition = 'Part Damaged';
+    } else if (/damage|bad|broken|poor/i.test(conditionRaw)) {
+      goodsCondition = 'Damaged';
+    }
+
+    const confirmRaw = (r.confirmationStatus || 'Pending').toString();
+    const confirmationStatus: ConfirmationStatus = /confirm|yes|verified|ok|done/i.test(
+      confirmRaw
+    )
+      ? 'Confirmed'
+      : 'Pending';
+
+    return {
+      id: `wh-rec-${Date.now()}-${idx}`,
+      goodsInStock: (r.goodsInStock || '').trim() || 'In Stock',
+      goodsArrivalDate: (r.goodsArrivalDate || '').trim() || dateOnly,
+      containerName: (r.containerName || '').trim() || `Container ${idx + 1}`,
+      takeoutFromContainer: (r.takeoutFromContainer || '').trim() || '-',
+      takeoutFromWarehouse: (r.takeoutFromWarehouse || '').trim() || 'None yet',
+      warehouseName:
+        (r.warehouseName || '').trim() ||
+        options.defaultWarehouseName.trim() ||
+        'Main Warehouse',
+      offloaderName: (r.offloaderName || '').trim() || '-',
+      personName: (r.personName || '').trim() || person,
+      confirmationStatus,
+      confirmationNote: (r.confirmationNote || '').trim(),
+      goodsCondition,
+      conditionDetails: (r.conditionDetails || '').trim() || goodsCondition,
+      hasUnaccounted,
+      unaccountedDetails,
+      credit: Math.max(0, Number(r.credit) || 0),
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      lastUpdatedBy: person,
+    };
+  });
+
+  const allRecords = [...newRecords, ...getWarehouseRecords()];
+  saveWarehouseRecords(allRecords);
+
+  const histEntry: WarehouseHistory = {
+    id: `wh-hist-${Date.now()}`,
+    recordId: newRecords[0].id,
+    containerName: 'Warehouse Import',
+    action: 'added',
+    summary: `Imported ${newRecords.length} warehouse inventory records from uploaded sheet`,
+    personName: person,
+    date: nowStr,
+  };
+  saveWarehouseHistory([histEntry, ...getWarehouseHistory()]);
+
+  return newRecords.length;
+}
+
 export function resetToDemoData(): void {
   saveContainers(INITIAL_CONTAINERS);
+  saveWarehouseRecords(INITIAL_WAREHOUSE_RECORDS);
+  saveWarehouseHistory(INITIAL_WAREHOUSE_HISTORY);
 }
 
 export function clearAllContainers(): void {
   saveContainers([]);
+  saveWarehouseRecords([]);
+  saveWarehouseHistory([]);
 }
+
 

@@ -1,88 +1,144 @@
 'use client';
 
 import React, { useState, useSyncExternalStore } from 'react';
-import { 
-  getContainers, 
-  resetToDemoData, 
+import {
+  getContainers,
+  getWarehouseRecords,
+  getWarehouseHistory,
+  resetToDemoData,
   clearAllContainers,
-  subscribeToStorage, 
-  INITIAL_CONTAINERS 
+  subscribeToStorage,
+  INITIAL_CONTAINERS,
+  INITIAL_WAREHOUSE_RECORDS,
+  INITIAL_WAREHOUSE_HISTORY,
 } from '@/lib/storage';
-import { SimpleNavbar } from '@/components/SimpleNavbar';
+import { SimpleNavbar, InventoryMode } from '@/components/SimpleNavbar';
 import { ContainerList } from '@/components/ContainerList';
 import { ContainerDetailView } from '@/components/ContainerDetailView';
 import { AddContainerModal } from '@/components/AddContainerModal';
 import { UploadManifestModal } from '@/components/UploadManifestModal';
+import { WarehouseInventoryView } from '@/components/WarehouseInventoryView';
 
 const emptySubscribe = () => () => {};
 
 export default function Home() {
-  const isMounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
+  const isMounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
 
-  // Synchronize state with storage
-  const rawContainers = useSyncExternalStore(subscribeToStorage, getContainers, () => INITIAL_CONTAINERS);
+  // Synchronize Customer Container state with storage
+  const rawContainers = useSyncExternalStore(
+    subscribeToStorage,
+    getContainers,
+    () => INITIAL_CONTAINERS
+  );
   const containers = isMounted ? rawContainers : INITIAL_CONTAINERS;
 
-  const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
+  // Synchronize Warehouse Inventory state with storage
+  const rawWarehouseRecords = useSyncExternalStore(
+    subscribeToStorage,
+    getWarehouseRecords,
+    () => INITIAL_WAREHOUSE_RECORDS
+  );
+  const warehouseRecords = isMounted
+    ? rawWarehouseRecords
+    : INITIAL_WAREHOUSE_RECORDS;
+
+  const rawWarehouseHistory = useSyncExternalStore(
+    subscribeToStorage,
+    getWarehouseHistory,
+    () => INITIAL_WAREHOUSE_HISTORY
+  );
+  const warehouseHistory = isMounted
+    ? rawWarehouseHistory
+    : INITIAL_WAREHOUSE_HISTORY;
+
+  const [activeMode, setActiveMode] = useState<InventoryMode>('customer');
+  const [selectedContainerId, setSelectedContainerId] = useState<string | null>(
+    null
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddContainerOpen, setIsAddContainerOpen] = useState(false);
   const [isUploadManifestOpen, setIsUploadManifestOpen] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   // Find currently selected container
-  const selectedContainer = containers.find(c => c.id === selectedContainerId) || null;
+  const selectedContainer =
+    containers.find((c) => c.id === selectedContainerId) || null;
+
+  const showNotice = (msg: string) => {
+    setNoticeMessage(msg);
+    setTimeout(() => setNoticeMessage(null), 4000);
+  };
 
   const handleResetDemo = () => {
     resetToDemoData();
-    setNoticeMessage('Clean production template restored (Container 1 & Container 2).');
-    setTimeout(() => setNoticeMessage(null), 3500);
+    showNotice(
+      'Clean baseline templates restored for both Customer Cargo and Warehouse Inventory.'
+    );
   };
 
   const handleClearAll = () => {
-    if (window.confirm('Clear all containers to prepare a blank slate for company handover?')) {
+    if (
+      window.confirm(
+        'Clear all Customer Containers and Warehouse Records to prepare a blank slate for company handover?'
+      )
+    ) {
       clearAllContainers();
       setSelectedContainerId(null);
-      setNoticeMessage('All containers cleared. Ready for fresh company data entry.');
-      setTimeout(() => setNoticeMessage(null), 3500);
+      showNotice(
+        'All Customer and Warehouse records cleared. Ready for fresh company data entry.'
+      );
     }
   };
 
   const handleContainerCreated = (newId: string) => {
+    setActiveMode('customer');
     setSelectedContainerId(newId);
   };
 
   const handleManifestImported = (containerId: string, count: number) => {
+    setActiveMode('customer');
     if (containerId) {
       setSelectedContainerId(containerId);
     }
-    setNoticeMessage(`Successfully imported ${count} customer cargo records from uploaded manifest.`);
-    setTimeout(() => setNoticeMessage(null), 4500);
+    showNotice(
+      `Successfully imported ${count} customer cargo records from uploaded manifest.`
+    );
   };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
-      
-      {/* Minimalist Top Navbar */}
+      {/* Top Navbar with Mode Switcher */}
       <SimpleNavbar
+        activeMode={activeMode}
+        onModeChange={(mode) => {
+          setActiveMode(mode);
+          setSearchQuery('');
+        }}
         containers={containers}
+        warehouseRecords={warehouseRecords}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onOpenAddContainer={() => setIsAddContainerOpen(true)}
         onOpenUploadManifest={() => setIsUploadManifestOpen(true)}
         onResetDemo={handleResetDemo}
-        onGoHome={() => setSelectedContainerId(null)}
+        onGoHome={() => {
+          setSelectedContainerId(null);
+        }}
         selectedContainerName={selectedContainer?.name}
       />
 
-      {/* Main Container Work Area */}
+      {/* Main Work Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8">
-        
         {/* Notice feedback message */}
         {noticeMessage && (
           <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-between shadow-xs">
             <span>{noticeMessage}</span>
-            <button 
-              onClick={() => setNoticeMessage(null)} 
+            <button
+              onClick={() => setNoticeMessage(null)}
               className="text-emerald-700 font-bold hover:underline"
             >
               Dismiss
@@ -90,8 +146,17 @@ export default function Home() {
           </div>
         )}
 
-        {/* View Switcher: List vs Specific Container */}
-        {selectedContainer ? (
+        {/* Mode Switcher: Customer Cargo Inventory vs Warehouse Inventory */}
+        {activeMode === 'warehouse' ? (
+          <WarehouseInventoryView
+            records={warehouseRecords}
+            history={warehouseHistory}
+            containers={containers}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onNotify={showNotice}
+          />
+        ) : selectedContainer ? (
           <ContainerDetailView
             container={selectedContainer}
             onBack={() => setSelectedContainerId(null)}
@@ -105,7 +170,6 @@ export default function Home() {
             onOpenUploadManifest={() => setIsUploadManifestOpen(true)}
           />
         )}
-
       </main>
 
       {/* Minimalist Footer */}
@@ -114,13 +178,13 @@ export default function Home() {
           <div className="flex items-center space-x-2">
             <span className="font-bold text-slate-800">Deep Down Logistics</span>
             <span className="text-slate-300">•</span>
-            <span>Container & Cargo Management System</span>
+            <span>Customer Cargo & Warehouse Inventory System</span>
           </div>
 
           <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 text-[11px]">
             <span>Production Handover Ready</span>
             <span className="text-slate-300">•</span>
-            <button 
+            <button
               onClick={handleClearAll}
               className="text-slate-600 hover:text-rose-600 hover:underline font-semibold"
               title="Clear all records to start completely blank for company handover"
@@ -128,7 +192,7 @@ export default function Home() {
               Clear for Handover
             </button>
             <span className="text-slate-300">•</span>
-            <button 
+            <button
               onClick={handleResetDemo}
               className="text-blue-600 hover:text-blue-800 hover:underline font-semibold"
               title="Load clean baseline template"
@@ -157,7 +221,6 @@ export default function Home() {
           onManifestImported={handleManifestImported}
         />
       )}
-
     </div>
   );
 }
