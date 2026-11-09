@@ -28,7 +28,6 @@ export default function Home() {
     () => false
   );
 
-  // Synchronize Customer Container state with storage
   const rawContainers = useSyncExternalStore(
     subscribeToStorage,
     getContainers,
@@ -36,7 +35,6 @@ export default function Home() {
   );
   const containers = isMounted ? rawContainers : INITIAL_CONTAINERS;
 
-  // Synchronize Warehouse Inventory state with storage
   const rawWarehouseRecords = useSyncExternalStore(
     subscribeToStorage,
     getWarehouseRecords,
@@ -64,7 +62,6 @@ export default function Home() {
   const [isUploadManifestOpen, setIsUploadManifestOpen] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
-  // Find currently selected container
   const selectedContainer =
     containers.find((c) => c.id === selectedContainerId) || null;
 
@@ -75,22 +72,14 @@ export default function Home() {
 
   const handleResetDemo = () => {
     resetToDemoData();
-    showNotice(
-      'Clean baseline templates restored for both Customer Cargo and Warehouse Inventory.'
-    );
+    showNotice('Sample data restored.');
   };
 
   const handleClearAll = () => {
-    if (
-      window.confirm(
-        'Clear all Customer Containers and Warehouse Records to prepare a blank slate for company handover?'
-      )
-    ) {
+    if (window.confirm('Clear all records?')) {
       clearAllContainers();
       setSelectedContainerId(null);
-      showNotice(
-        'All Customer and Warehouse records cleared. Ready for fresh company data entry.'
-      );
+      showNotice('All records cleared.');
     }
   };
 
@@ -104,14 +93,11 @@ export default function Home() {
     if (containerId) {
       setSelectedContainerId(containerId);
     }
-    showNotice(
-      `Successfully imported ${count} customer cargo records from uploaded manifest.`
-    );
+    showNotice(`Imported ${count} records from manifest.`);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
-      {/* Top Navbar with Mode Switcher */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       <SimpleNavbar
         activeMode={activeMode}
         onModeChange={(mode) => {
@@ -122,38 +108,30 @@ export default function Home() {
         warehouseRecords={warehouseRecords}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        onOpenAddContainer={() => setIsAddContainerOpen(true)}
-        onOpenUploadManifest={() => setIsUploadManifestOpen(true)}
-        onResetDemo={handleResetDemo}
         onGoHome={() => {
           setSelectedContainerId(null);
         }}
-        selectedContainerName={selectedContainer?.name}
       />
 
-      {/* Main Work Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8">
-        {/* Notice feedback message */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6">
         {noticeMessage && (
-          <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-between shadow-xs">
+          <div className="mb-4 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-between">
             <span>{noticeMessage}</span>
             <button
               onClick={() => setNoticeMessage(null)}
-              className="text-emerald-700 font-bold hover:underline"
+              className="text-emerald-700 font-bold hover:underline ml-3"
             >
-              Dismiss
+              Close
             </button>
           </div>
         )}
 
-        {/* Mode Switcher: Customer Cargo Inventory vs Warehouse Inventory */}
         {activeMode === 'warehouse' ? (
           <WarehouseInventoryView
             records={warehouseRecords}
             history={warehouseHistory}
             containers={containers}
             searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
             onNotify={showNotice}
           />
         ) : selectedContainer ? (
@@ -172,45 +150,33 @@ export default function Home() {
         )}
       </main>
 
-      {/* Minimalist Footer */}
       <footer className="border-t border-slate-200 bg-white py-4 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
-          <div className="flex items-center space-x-2">
-            <span className="font-bold text-slate-800">Deep Down Logistics</span>
-            <span className="text-slate-300">•</span>
-            <span>Customer Cargo & Warehouse Inventory System</span>
-          </div>
+          <span className="font-bold text-slate-800">Deep Down Logistics</span>
 
-          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 text-[11px]">
-            <span>Production Handover Ready</span>
-            <span className="text-slate-300">•</span>
+          <div className="flex items-center gap-4">
             <button
               onClick={handleClearAll}
-              className="text-slate-600 hover:text-rose-600 hover:underline font-semibold"
-              title="Clear all records to start completely blank for company handover"
+              className="text-slate-500 hover:text-rose-600 hover:underline font-semibold"
             >
-              Clear for Handover
+              Clear All
             </button>
-            <span className="text-slate-300">•</span>
             <button
               onClick={handleResetDemo}
               className="text-blue-600 hover:text-blue-800 hover:underline font-semibold"
-              title="Load clean baseline template"
             >
-              Reset Template
+              Reset Sample
             </button>
           </div>
         </div>
       </footer>
 
-      {/* Add Container Modal */}
       <AddContainerModal
         isOpen={isAddContainerOpen}
         onClose={() => setIsAddContainerOpen(false)}
         onContainerCreated={handleContainerCreated}
       />
 
-      {/* Upload Manifest Modal */}
       {isUploadManifestOpen && (
         <UploadManifestModal
           isOpen={isUploadManifestOpen}
