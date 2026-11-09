@@ -378,3 +378,57 @@ export function exportAllContainersToPdf(containers: Container[]): void {
   const fileDate = new Date().toISOString().split('T')[0];
   doc.save(`Deep_Down_Logistics_All_Containers_${fileDate}.pdf`);
 }
+
+// Download a clean 10-column Excel Manifest Template for uploading
+export function downloadManifestTemplateExcel(defaultContainerName = 'Container 1'): void {
+  const wb = XLSX.utils.book_new();
+  const sampleRows = [
+    {
+      '1. Container': defaultContainerName,
+      '2. Name': 'Alhaji Musa Ibrahim',
+      '3. Phone Number': '0803 452 8910',
+      '4. CBM': 14.5,
+      '5. Amount': 1450000,
+      '6. Taken': 'Not Taken',
+      '7. Paid': 500000,
+      '8. Credit': 950000,
+      '9a. Receiver Name': '',
+      '9b. Receiver Phone': '',
+      '9c. Receiver Date': '',
+      '10. Warehouse': 'Main Warehouse',
+    },
+    {
+      '1. Container': defaultContainerName,
+      '2. Name': 'Chinedu Okafor Ventures',
+      '3. Phone Number': '0802 998 1122',
+      '4. CBM': 8.2,
+      '5. Amount': 820000,
+      '6. Taken': 'All Collected',
+      '7. Paid': 820000,
+      '8. Credit': 0,
+      '9a. Receiver Name': 'Emeka Okafor',
+      '9b. Receiver Phone': '0813 400 7788',
+      '9c. Receiver Date': new Date().toISOString().split('T')[0],
+      '10. Warehouse': 'Main Warehouse',
+    },
+  ];
+
+  const ws = XLSX.utils.json_to_sheet(sampleRows);
+  ws['!cols'] = [
+    { wch: 20 },
+    { wch: 26 },
+    { wch: 18 },
+    { wch: 10 },
+    { wch: 14 },
+    { wch: 22 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 20 },
+    { wch: 18 },
+    { wch: 14 },
+    { wch: 20 },
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Manifest Template');
+  XLSX.writeFile(wb, 'Deep_Down_Logistics_Manifest_Template.xlsx');
+}
+

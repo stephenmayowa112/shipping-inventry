@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Package, Plus, Search, FileSpreadsheet, FileText, RotateCcw, Download, X } from 'lucide-react';
+import { Package, Plus, Search, FileSpreadsheet, FileText, RotateCcw, Download, Upload, X } from 'lucide-react';
 import { Container } from '@/lib/types';
 import { exportAllContainersToExcel, exportAllContainersToPdf } from '@/lib/exportUtils';
 
@@ -10,6 +10,7 @@ interface SimpleNavbarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onOpenAddContainer: () => void;
+  onOpenUploadManifest: () => void;
   onResetDemo: () => void;
   onGoHome: () => void;
   selectedContainerName?: string;
@@ -20,6 +21,7 @@ export function SimpleNavbar({
   searchQuery,
   onSearchChange,
   onOpenAddContainer,
+  onOpenUploadManifest,
   onResetDemo,
   onGoHome,
   selectedContainerName,
@@ -167,6 +169,18 @@ export function SimpleNavbar({
               aria-label="Restore demo containers"
             >
               <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
+
+            {/* Upload Manifest button */}
+            <button
+              type="button"
+              onClick={onOpenUploadManifest}
+              title="Upload Manifest (Excel, CSV, PDF, or Image)"
+              className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors shrink-0 min-h-[36px] sm:min-h-[40px]"
+            >
+              <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.2]" />
+              <span className="hidden sm:inline">Upload Manifest</span>
+              <span className="sm:hidden">Manifest</span>
             </button>
 
             {/* Add Container button */}

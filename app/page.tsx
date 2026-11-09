@@ -12,6 +12,7 @@ import { SimpleNavbar } from '@/components/SimpleNavbar';
 import { ContainerList } from '@/components/ContainerList';
 import { ContainerDetailView } from '@/components/ContainerDetailView';
 import { AddContainerModal } from '@/components/AddContainerModal';
+import { UploadManifestModal } from '@/components/UploadManifestModal';
 
 const emptySubscribe = () => () => {};
 
@@ -25,6 +26,7 @@ export default function Home() {
   const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddContainerOpen, setIsAddContainerOpen] = useState(false);
+  const [isUploadManifestOpen, setIsUploadManifestOpen] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   // Find currently selected container
@@ -49,6 +51,14 @@ export default function Home() {
     setSelectedContainerId(newId);
   };
 
+  const handleManifestImported = (containerId: string, count: number) => {
+    if (containerId) {
+      setSelectedContainerId(containerId);
+    }
+    setNoticeMessage(`Successfully imported ${count} customer cargo records from uploaded manifest.`);
+    setTimeout(() => setNoticeMessage(null), 4500);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
       
@@ -58,6 +68,7 @@ export default function Home() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onOpenAddContainer={() => setIsAddContainerOpen(true)}
+        onOpenUploadManifest={() => setIsUploadManifestOpen(true)}
         onResetDemo={handleResetDemo}
         onGoHome={() => setSelectedContainerId(null)}
         selectedContainerName={selectedContainer?.name}
@@ -91,6 +102,7 @@ export default function Home() {
             searchQuery={searchQuery}
             onSelectContainer={(c) => setSelectedContainerId(c.id)}
             onOpenAddContainer={() => setIsAddContainerOpen(true)}
+            onOpenUploadManifest={() => setIsUploadManifestOpen(true)}
           />
         )}
 
@@ -133,6 +145,18 @@ export default function Home() {
         onClose={() => setIsAddContainerOpen(false)}
         onContainerCreated={handleContainerCreated}
       />
+
+      {/* Upload Manifest Modal */}
+      {isUploadManifestOpen && (
+        <UploadManifestModal
+          isOpen={isUploadManifestOpen}
+          onClose={() => setIsUploadManifestOpen(false)}
+          targetContainerId={selectedContainer?.id}
+          targetContainerName={selectedContainer?.name}
+          defaultWarehouse={selectedContainer?.warehouse || ''}
+          onManifestImported={handleManifestImported}
+        />
+      )}
 
     </div>
   );

@@ -11,6 +11,7 @@ import {
   Trash2,
   Warehouse,
   Box,
+  Upload,
 } from 'lucide-react';
 import {
   exportSingleContainerToExcel,
@@ -25,6 +26,7 @@ interface ContainerListProps {
   searchQuery: string;
   onSelectContainer: (container: Container) => void;
   onOpenAddContainer: () => void;
+  onOpenUploadManifest: () => void;
 }
 
 export function ContainerList({
@@ -32,6 +34,7 @@ export function ContainerList({
   searchQuery,
   onSelectContainer,
   onOpenAddContainer,
+  onOpenUploadManifest,
 }: ContainerListProps) {
   // Filter containers by container name, warehouse, note, or any customer's 10 fields
   const filteredContainers = containers.filter((c) => {
@@ -103,6 +106,15 @@ export function ContainerList({
           </div>
 
           <div className="flex flex-col xs:flex-row sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onOpenUploadManifest}
+              className="flex items-center justify-center space-x-1.5 px-4 py-3 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-sm shadow-xs transition-colors min-h-[44px]"
+            >
+              <Upload className="w-4 h-4 stroke-[2.2]" />
+              <span>Upload Manifest</span>
+            </button>
+
             <button
               type="button"
               onClick={onOpenAddContainer}
@@ -406,13 +418,23 @@ export function ContainerList({
               ? 'Try searching with a different customer name, phone number, receiver, or warehouse.'
               : 'Add your first container to start recording the 10 customer cargo fields.'}
           </p>
-          <button
-            type="button"
-            onClick={onOpenAddContainer}
-            className="px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition-colors min-h-[44px]"
-          >
-            + Add First Container
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-2.5">
+            <button
+              type="button"
+              onClick={onOpenUploadManifest}
+              className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-xs transition-colors min-h-[44px] inline-flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4 stroke-[2.2]" />
+              <span>Upload Manifest</span>
+            </button>
+            <button
+              type="button"
+              onClick={onOpenAddContainer}
+              className="px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition-colors min-h-[44px]"
+            >
+              + Add First Container
+            </button>
+          </div>
         </div>
       )}
     </div>

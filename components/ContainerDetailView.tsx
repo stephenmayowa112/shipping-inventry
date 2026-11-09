@@ -19,6 +19,7 @@ import {
   LayoutGrid,
   Table as TableIcon,
   CheckCircle2,
+  Upload,
 } from 'lucide-react';
 import {
   exportSingleContainerToExcel,
@@ -33,6 +34,7 @@ import {
 import { AddItemModal } from './AddItemModal';
 import { RemoveItemModal } from './RemoveItemModal';
 import { AddStockModal } from './AddStockModal';
+import { UploadManifestModal } from './UploadManifestModal';
 
 interface ContainerDetailViewProps {
   container: Container;
@@ -46,6 +48,7 @@ export function ContainerDetailView({
   onBack,
 }: ContainerDetailViewProps) {
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
+  const [isUploadManifestOpen, setIsUploadManifestOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ContainerItem | null>(null);
   const [selectedPickupItem, setSelectedPickupItem] =
     useState<ContainerItem | null>(null);
@@ -277,17 +280,26 @@ export function ContainerDetailView({
           <div className="flex flex-col xs:flex-row sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
             <button
               type="button"
+              onClick={() => setIsUploadManifestOpen(true)}
+              className="order-1 xs:order-2 sm:order-2 px-3.5 py-3 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-xs transition-colors min-h-[44px]"
+            >
+              <Upload className="w-4 h-4 stroke-[2.2]" />
+              <span>Upload Manifest</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => {
                 setEditingItem(null);
                 setIsAddItemOpen(true);
               }}
-              className="order-1 xs:order-3 sm:order-3 px-4 py-3 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs transition-colors min-h-[44px]"
+              className="order-2 xs:order-3 sm:order-3 px-4 py-3 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-xs transition-colors min-h-[44px]"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>+ Add Customer Record</span>
             </button>
 
-            <div className="flex items-center gap-2 order-2 xs:order-1 sm:order-1">
+            <div className="flex items-center gap-2 order-3 xs:order-1 sm:order-1">
               <button
                 type="button"
                 onClick={() => exportSingleContainerToExcel(container)}
@@ -450,17 +462,27 @@ export function ContainerDetailView({
               : 'No records match the selected filter.'}
           </p>
           {container.items.length === 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                setEditingItem(null);
-                setIsAddItemOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-sm min-h-[44px]"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add First Customer Record (10 Fields)</span>
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsUploadManifestOpen(true)}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm min-h-[44px]"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Upload Manifest</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingItem(null);
+                  setIsAddItemOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-sm min-h-[44px]"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Add Customer Record Manually</span>
+              </button>
+            </div>
           )}
         </div>
       ) : viewMode === 'table' ? (
@@ -876,6 +898,18 @@ export function ContainerDetailView({
           containerId={container.id}
           containerName={container.name}
           onClose={() => setSelectedPaymentItem(null)}
+        />
+      )}
+
+      {/* Upload Manifest Into This Container Modal */}
+      {isUploadManifestOpen && (
+        <UploadManifestModal
+          isOpen={isUploadManifestOpen}
+          onClose={() => setIsUploadManifestOpen(false)}
+          targetContainerId={container.id}
+          targetContainerName={container.name}
+          defaultWarehouse={container.warehouse || ''}
+          onManifestImported={() => setIsUploadManifestOpen(false)}
         />
       )}
     </div>

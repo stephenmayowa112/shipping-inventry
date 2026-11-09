@@ -593,6 +593,225 @@ export function deleteItem(containerId: string, itemId: string): void {
 export const deleteItemFromContainer = deleteItem;
 export const updateContainerTitle = updateContainer;
 
+export interface ManifestRowInput {
+  containerName?: string;
+  name: string;
+  phone?: string;
+  cbm?: number;
+  amount?: number;
+  takenStatus?: TakenStatus;
+  taken?: string;
+  paid?: number;
+  credit?: number;
+  receiverName?: string;
+  receiverPhone?: string;
+  receiverDate?: string;
+  warehouse?: string;
+}
+
+export function importManifestRecords(
+  rows: ManifestRowInput[],
+  options: {
+    targetContainerId?: string;
+    defaultContainerName: string;
+    defaultWarehouse: string;
+    personName: string;
+  }
+): string {
+  const person = options.personName.trim() || 'Staff';
+  saveLastOperatorName(person);
+
+  const nowIso = new Date().toISOString();
+  const nowStr = nowIso.replace('T', ' ').substring(0, 16);
+  const dateOnly = nowStr.split(' ')[0];
+
+  const validRows = rows.filter((r) => r.name && r.name.trim().length > 0);
+  if (validRows.length === 0) return options.targetContainerId || '';
+
+  const containers = [...getContainers()];
+  let primaryContainerId = options.targetContainerId || '';
+
+  if (options.targetContainerId) {
+    // Import directly into the specified container
+    const idx = containers.findIndex((c) => c.id === options.targetContainerId);
+    if (idx !== -1) {
+      const target = containers[idx];
+      const newItems: ContainerItem[] = validRows.map((r, i) => {
+        const amount = Math.max(0, Number(r.amount) || 0);
+        const paid = Math.max(0, Number(r.paid) || 0);
+        const credit =
+          r.credit !== undefined && !Number.isNaN(Number(r.credit))
+            ? Math.max(0, Number(r.credit))
+            : Math.max(0, amount - paid);
+        const cbm = Math.max(0, Number(r.cbm) || 0);
+        const takenStatus: TakenStatus =
+          r.takenStatus === 'Taken' || r.takenStatus === 'Partial'
+            ? r.takenStatus
+            : 'Not Taken';
+        const taken = (r.taken || '').trim() || takenStatus;
+
+        return {
+          id: `itm-${Date.now()}-${i}`,
+          containerId: target.id,
+          containerName: target.name,
+          name: r.name.trim(),
+          phone: (r.phone || '').trim(),
+          cbm,
+          amount,
+          takenStatus,
+          taken,
+          paid,
+          credit,
+          receiverName: (r.receiverName || '').trim(),
+          receiverPhone: (r.receiverPhone || '').trim(),
+          receiverDate: (r.receiverDate || '').trim(),
+          warehouse:
+            (r.warehouse || '').trim() ||
+            options.defaultWarehouse.trim() ||
+            target.warehouse ||
+            '',
+          addedDate: dateOnly,
+          lastUpdated: nowStr,
+          addedBy: person,
+          lastUpdatedBy: person,
+        };
+      });
+
+      const historyEntry: ItemHistory = {
+        id: `hist-${Date.now()}`,
+        containerId: target.id,
+        containerName: target.name,
+        itemName: 'Manifest Uploaded',
+        action: 'added',
+        summary: `Imported ${newItems.length} customer cargo records from uploaded manifest`,
+        personName: person,
+        date: nowStr,
+      };
+
+      containers[idx] = {
+        ...target,
+        warehouse: options.defaultWarehouse.trim() || target.warehouse,
+        updatedBy: person,
+        updatedAt: nowIso,
+        items: [...newItems, ...target.items],
+        history: [historyEntry, ...target.history],
+      };
+      primaryContainerId = target.id;
+    }
+  } else {
+    // Group rows by container name (or fallback to options.defaultContainerName)
+    const fallbackName =
+      options.defaultContainerName.trim() ||
+      `Container ${containers.length + 1}`;
+    const groups = new Map<string, ManifestRowInput[]>();
+
+    validRows.forEach((row) => {
+      const cName = (row.containerName || '').trim() || fallbackName;
+      const existingGroup = groups.get(cName) || [];
+      existingGroup.push(row);
+      groups.set(cName, existingGroup);
+    });
+
+    let groupIndex = 0;
+    groups.forEach((groupRows, cName) => {
+      const existingIdx = containers.findIndex(
+        (c) => c.name.toLowerCase() === cName.toLowerCase()
+      );
+      const containerId =
+        existingIdx !== -1
+          ? containers[existingIdx].id
+          : `cnt-${Date.now()}-${groupIndex}`;
+
+      if (!primaryContainerId) {
+        primaryContainerId = containerId;
+      }
+
+      const warehouseForContainer =
+        options.defaultWarehouse.trim() ||
+        (groupRows.find((r) => r.warehouse && r.warehouse.trim())?.warehouse || '').trim() ||
+        (existingIdx !== -1 ? containers[existingIdx].warehouse : '');
+
+      const newItems: ContainerItem[] = groupRows.map((r, i) => {
+        const amount = Math.max(0, Number(r.amount) || 0);
+        const paid = Math.max(0, Number(r.paid) || 0);
+        const credit =
+          r.credit !== undefined && !Number.isNaN(Number(r.credit))
+            ? Math.max(0, Number(r.credit))
+            : Math.max(0, amount - paid);
+        const cbm = Math.max(0, Number(r.cbm) || 0);
+        const takenStatus: TakenStatus =
+          r.takenStatus === 'Taken' || r.takenStatus === 'Partial'
+            ? r.takenStatus
+            : 'Not Taken';
+        const taken = (r.taken || '').trim() || takenStatus;
+
+        return {
+          id: `itm-${Date.now()}-${groupIndex}-${i}`,
+          containerId,
+          containerName: existingIdx !== -1 ? containers[existingIdx].name : cName,
+          name: r.name.trim(),
+          phone: (r.phone || '').trim(),
+          cbm,
+          amount,
+          takenStatus,
+          taken,
+          paid,
+          credit,
+          receiverName: (r.receiverName || '').trim(),
+          receiverPhone: (r.receiverPhone || '').trim(),
+          receiverDate: (r.receiverDate || '').trim(),
+          warehouse: (r.warehouse || '').trim() || warehouseForContainer,
+          addedDate: dateOnly,
+          lastUpdated: nowStr,
+          addedBy: person,
+          lastUpdatedBy: person,
+        };
+      });
+
+      const historyEntry: ItemHistory = {
+        id: `hist-${Date.now()}-${groupIndex}`,
+        containerId,
+        containerName: existingIdx !== -1 ? containers[existingIdx].name : cName,
+        itemName: 'Manifest Uploaded',
+        action: 'added',
+        summary: `Created/updated from uploaded manifest with ${newItems.length} customer records`,
+        personName: person,
+        date: nowStr,
+      };
+
+      if (existingIdx !== -1) {
+        const target = containers[existingIdx];
+        containers[existingIdx] = {
+          ...target,
+          warehouse: warehouseForContainer || target.warehouse,
+          updatedBy: person,
+          updatedAt: nowIso,
+          items: [...newItems, ...target.items],
+          history: [historyEntry, ...target.history],
+        };
+      } else {
+        const newContainer: Container = {
+          id: containerId,
+          name: cName,
+          warehouse: warehouseForContainer,
+          createdBy: person,
+          updatedBy: person,
+          items: newItems,
+          history: [historyEntry],
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        };
+        containers.unshift(newContainer);
+      }
+
+      groupIndex++;
+    });
+  }
+
+  saveContainers(containers);
+  return primaryContainerId;
+}
+
 export function resetToDemoData(): void {
   saveContainers(INITIAL_CONTAINERS);
 }
@@ -600,3 +819,4 @@ export function resetToDemoData(): void {
 export function clearAllContainers(): void {
   saveContainers([]);
 }
+
