@@ -14,6 +14,7 @@ import {
   WarehouseRecord,
   GoodsCondition,
   ConfirmationStatus,
+  WAREHOUSE_NAMES,
 } from '@/lib/types';
 import {
   addWarehouseRecord,
@@ -26,6 +27,7 @@ interface WarehouseRecordModalProps {
   isOpen: boolean;
   onClose: () => void;
   containers: Container[];
+  defaultWarehouse?: string;
   editingRecord?: WarehouseRecord | null;
   onSaved?: (message: string) => void;
 }
@@ -34,6 +36,7 @@ export function WarehouseRecordModal({
   isOpen,
   onClose,
   containers,
+  defaultWarehouse,
   editingRecord,
   onSaved,
 }: WarehouseRecordModalProps) {
@@ -55,7 +58,10 @@ export function WarehouseRecordModal({
     editingRecord?.takeoutFromWarehouse || ''
   );
   const [warehouseName, setWarehouseName] = useState(
-    editingRecord?.warehouseName || containers[0]?.warehouse || ''
+    editingRecord?.warehouseName ||
+      defaultWarehouse ||
+      containers[0]?.warehouse ||
+      WAREHOUSE_NAMES[0]
   );
   const [offloaderName, setOffloaderName] = useState(
     editingRecord?.offloaderName || ''
@@ -144,7 +150,7 @@ export function WarehouseRecordModal({
       takeoutFromContainer:
         takeoutFromContainer.trim() || 'Offloaded from container',
       takeoutFromWarehouse: takeoutFromWarehouse.trim() || 'None yet',
-      warehouseName: warehouseName.trim() || 'Main Warehouse',
+      warehouseName: warehouseName.trim() || WAREHOUSE_NAMES[0],
       offloaderName: offloaderName.trim(),
       personName: personName.trim(),
       confirmationStatus,
@@ -301,15 +307,24 @@ export function WarehouseRecordModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Name of Warehouse
+                Name of Warehouse *
               </label>
-              <input
-                type="text"
+              <select
                 value={warehouseName}
                 onChange={(e) => setWarehouseName(e.target.value)}
-                placeholder="Enter warehouse name"
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900 font-medium min-h-[46px]"
-              />
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900 font-semibold min-h-[46px]"
+                required
+              >
+                {warehouseName &&
+                  !WAREHOUSE_NAMES.includes(warehouseName) && (
+                    <option value={warehouseName}>{warehouseName}</option>
+                  )}
+                {WAREHOUSE_NAMES.map((wh) => (
+                  <option key={wh} value={wh}>
+                    {wh}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

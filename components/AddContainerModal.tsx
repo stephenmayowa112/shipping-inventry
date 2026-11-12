@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { X, Package, Plus } from 'lucide-react';
 import { addContainer, getLastOperatorName } from '@/lib/storage';
+import { WAREHOUSE_NAMES } from '@/lib/types';
 
 interface AddContainerModalProps {
   isOpen: boolean;
@@ -16,7 +17,7 @@ export function AddContainerModal({
   onContainerCreated,
 }: AddContainerModalProps) {
   const [name, setName] = useState('');
-  const [warehouse, setWarehouse] = useState('');
+  const [warehouse, setWarehouse] = useState(WAREHOUSE_NAMES[0]);
   const [personName, setPersonName] = useState(() => getLastOperatorName());
   const [note, setNote] = useState('');
 
@@ -83,14 +84,18 @@ export function AddContainerModal({
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
               Warehouse *
             </label>
-            <input
-              type="text"
+            <select
               required
               value={warehouse}
               onChange={(e) => setWarehouse(e.target.value)}
-              placeholder="Enter warehouse name"
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900 min-h-[46px]"
-            />
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900 min-h-[46px]"
+            >
+              {WAREHOUSE_NAMES.map((wh) => (
+                <option key={wh} value={wh}>
+                  {wh}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

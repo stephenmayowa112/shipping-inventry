@@ -8,7 +8,7 @@ import {
   getLastOperatorName,
   formatMoney,
 } from '@/lib/storage';
-import { ContainerItem, TakenStatus } from '@/lib/types';
+import { ContainerItem, TakenStatus, WAREHOUSE_NAMES } from '@/lib/types';
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -54,7 +54,7 @@ export function AddItemModal({
     editingItem?.receiverDate || ''
   );
   const [warehouse, setWarehouse] = useState(
-    editingItem?.warehouse || defaultWarehouse || ''
+    editingItem?.warehouse || defaultWarehouse || WAREHOUSE_NAMES[0]
   );
   const [personName, setPersonName] = useState(() => getLastOperatorName());
 
@@ -103,7 +103,7 @@ export function AddItemModal({
       receiverName: receiverName.trim(),
       receiverPhone: receiverPhone.trim(),
       receiverDate: receiverDate.trim(),
-      warehouse: warehouse.trim() || defaultWarehouse || 'Main Warehouse',
+      warehouse: warehouse.trim() || defaultWarehouse || WAREHOUSE_NAMES[0],
       personName: personName.trim(),
     };
 
@@ -332,14 +332,21 @@ export function AddItemModal({
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 Warehouse *
               </label>
-              <input
-                type="text"
+              <select
                 required
                 value={warehouse}
                 onChange={(e) => setWarehouse(e.target.value)}
-                placeholder="Warehouse name"
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900 min-h-[46px]"
-              />
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900 min-h-[46px]"
+              >
+                {warehouse && !WAREHOUSE_NAMES.includes(warehouse) && (
+                  <option value={warehouse}>{warehouse}</option>
+                )}
+                {WAREHOUSE_NAMES.map((wh) => (
+                  <option key={wh} value={wh}>
+                    {wh}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

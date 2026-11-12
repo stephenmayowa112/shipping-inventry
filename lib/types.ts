@@ -109,3 +109,22 @@ export interface WarehouseHistory {
   personName: string;
   date: string;
 }
+
+export const WAREHOUSE_NAMES: string[] = [
+  'Kotonu',
+  'Masalachi first',
+  'Masalachi middle',
+  'Masalachi last',
+  'Tomato',
+  'Eugenco',
+  'Anyibest',
+  'Former office',
+  'Ugulu',
+  'Rice warehouse',
+  'Talis single shops',
+  'Kastina single shop',
+  'Eugenco side shop',
+  'Double warehouse',
+  'Medium warehouse',
+];
+

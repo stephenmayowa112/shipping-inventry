@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Container, ContainerItem } from '@/lib/types';
+import { Container, ContainerItem, WAREHOUSE_NAMES } from '@/lib/types';
 import {
   ArrowLeft,
   Plus,
@@ -159,13 +159,22 @@ export function ContainerDetailView({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Warehouse *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     required
-                    value={editWarehouse}
+                    value={editWarehouse || WAREHOUSE_NAMES[0]}
                     onChange={(e) => setEditWarehouse(e.target.value)}
-                    className="w-full text-sm font-medium bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 min-h-[44px]"
-                  />
+                    className="w-full text-sm font-semibold bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 min-h-[44px]"
+                  >
+                    {editWarehouse &&
+                      !WAREHOUSE_NAMES.includes(editWarehouse) && (
+                        <option value={editWarehouse}>{editWarehouse}</option>
+                      )}
+                    {WAREHOUSE_NAMES.map((wh) => (
+                      <option key={wh} value={wh}>
+                        {wh}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

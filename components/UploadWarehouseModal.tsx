@@ -16,7 +16,11 @@ import {
   Loader2,
   FileText,
 } from 'lucide-react';
-import { GoodsCondition, ConfirmationStatus } from '@/lib/types';
+import {
+  GoodsCondition,
+  ConfirmationStatus,
+  WAREHOUSE_NAMES,
+} from '@/lib/types';
 import {
   WarehouseRecordInput,
   importWarehouseRecords,
@@ -28,6 +32,7 @@ import { downloadWarehouseTemplateExcel } from '@/lib/exportUtils';
 interface UploadWarehouseModalProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultWarehouse?: string;
   onImported: (count: number) => void;
 }
 
@@ -164,7 +169,9 @@ function parseExcelRowsToWarehouse(
       containerName: containerName || 'Container 1',
       takeoutFromContainer: String(takeoutContainerRaw || '-').trim(),
       takeoutFromWarehouse: String(takeoutWarehouseRaw || 'None yet').trim(),
-      warehouseName: String(warehouseRaw || defaultWarehouse || 'Main Warehouse').trim(),
+      warehouseName: String(
+        warehouseRaw || defaultWarehouse || WAREHOUSE_NAMES[0]
+      ).trim(),
       offloaderName: String(offloaderRaw || '-').trim(),
       personName: String(personRaw || defaultPerson || 'Staff').trim(),
       confirmationStatus,
@@ -183,12 +190,15 @@ function parseExcelRowsToWarehouse(
 export function UploadWarehouseModal({
   isOpen,
   onClose,
+  defaultWarehouse: initialWarehouse,
   onImported,
 }: UploadWarehouseModalProps) {
   const [personName, setPersonName] = useState(
     () => getLastOperatorName() || ''
   );
-  const [defaultWarehouse, setDefaultWarehouse] = useState('Main Warehouse');
+  const [defaultWarehouse, setDefaultWarehouse] = useState(
+    initialWarehouse || WAREHOUSE_NAMES[0]
+  );
   const [rows, setRows] = useState<WarehouseRecordInput[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [error, setError] = useState('');
@@ -284,7 +294,7 @@ export function UploadWarehouseModal({
               r.takeoutFromWarehouse || 'None yet'
             ).trim(),
             warehouseName: String(
-              r.warehouseName || defaultWarehouse || 'Main Warehouse'
+              r.warehouseName || defaultWarehouse || WAREHOUSE_NAMES[0]
             ).trim(),
             offloaderName: String(r.offloaderName || '-').trim(),
             personName: String(r.personName || personName || 'Staff').trim(),
@@ -310,7 +320,7 @@ export function UploadWarehouseModal({
             containerName: 'Container 1',
             takeoutFromContainer: '',
             takeoutFromWarehouse: 'None yet',
-            warehouseName: defaultWarehouse || 'Main Warehouse',
+            warehouseName: defaultWarehouse || WAREHOUSE_NAMES[0],
             offloaderName: '',
             personName: personName || 'Staff',
             confirmationStatus: 'Pending',
@@ -330,7 +340,7 @@ export function UploadWarehouseModal({
           containerName: 'Container 1',
           takeoutFromContainer: '',
           takeoutFromWarehouse: 'None yet',
-          warehouseName: defaultWarehouse || 'Main Warehouse',
+          warehouseName: defaultWarehouse || WAREHOUSE_NAMES[0],
           offloaderName: '',
           personName: personName || 'Staff',
           confirmationStatus: 'Pending',
@@ -405,7 +415,7 @@ export function UploadWarehouseModal({
               <label className="flex items-center space-x-1.5 text-[11px] font-bold uppercase tracking-wider text-blue-950 mb-1">
                 <UserCheck className="w-3.5 h-3.5 text-blue-600" />
                 <span>
-                  6. Name of Person (Staff) <span className="text-rose-500">*</span>
+                  Name of Person (Staff) <span className="text-rose-500">*</span>
                 </span>
               </label>
               <input
@@ -422,15 +432,19 @@ export function UploadWarehouseModal({
 
             <div className="bg-white border border-slate-200 rounded-lg p-2.5">
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
-                Default Warehouse Name
+                Warehouse Name
               </label>
-              <input
-                type="text"
+              <select
                 value={defaultWarehouse}
                 onChange={(e) => setDefaultWarehouse(e.target.value)}
-                placeholder="Main Warehouse"
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900"
-              />
+                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900"
+              >
+                {WAREHOUSE_NAMES.map((wh) => (
+                  <option key={wh} value={wh}>
+                    {wh}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="bg-white border border-slate-200 rounded-lg p-2.5 flex flex-col justify-between">
@@ -524,7 +538,7 @@ export function UploadWarehouseModal({
                   <button
                     type="button"
                     onClick={() =>
-                      setRows((prev) => [
+                          setRows((prev) => [
                         ...prev,
                         {
                           goodsInStock: '',
@@ -532,7 +546,7 @@ export function UploadWarehouseModal({
                           containerName: 'Container 1',
                           takeoutFromContainer: '',
                           takeoutFromWarehouse: 'None yet',
-                          warehouseName: defaultWarehouse || 'Main Warehouse',
+                          warehouseName: defaultWarehouse || WAREHOUSE_NAMES[0],
                           offloaderName: '',
                           personName: personName || 'Staff',
                           confirmationStatus: 'Pending',
@@ -559,19 +573,20 @@ export function UploadWarehouseModal({
               </div>
 
               <div className="border border-slate-200 rounded-xl overflow-x-auto max-h-[340px]">
-                <table className="w-full text-left border-collapse min-w-[1050px]">
+                <table className="w-full text-left border-collapse min-w-[1150px]">
                   <thead className="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider sticky top-0 z-10">
                     <tr>
                       <th className="py-2.5 px-2 w-8">#</th>
-                      <th className="py-2.5 px-2">1. Goods In-Stock</th>
-                      <th className="py-2.5 px-2 w-28">2. Arrival Date</th>
-                      <th className="py-2.5 px-2 w-28">3a. Container</th>
-                      <th className="py-2.5 px-2">3b. Container Takeout</th>
-                      <th className="py-2.5 px-2">4. Warehouse Takeout</th>
-                      <th className="py-2.5 px-2 w-32">5. Offloader</th>
-                      <th className="py-2.5 px-2 w-28">8. Condition</th>
-                      <th className="py-2.5 px-2 w-32">9. Unaccounted</th>
-                      <th className="py-2.5 px-2 w-24">10. Credit</th>
+                      <th className="py-2.5 px-2">Goods In-Stock</th>
+                      <th className="py-2.5 px-2 w-28">Arrival Date</th>
+                      <th className="py-2.5 px-2 w-28">Container</th>
+                      <th className="py-2.5 px-2">Container Takeout</th>
+                      <th className="py-2.5 px-2">Warehouse Takeout</th>
+                      <th className="py-2.5 px-2 w-36">Warehouse</th>
+                      <th className="py-2.5 px-2 w-32">Offloader</th>
+                      <th className="py-2.5 px-2 w-28">Condition</th>
+                      <th className="py-2.5 px-2 w-32">Unaccounted</th>
+                      <th className="py-2.5 px-2 w-24">Credit</th>
                       <th className="py-2.5 px-2 w-10"></th>
                     </tr>
                   </thead>
@@ -642,6 +657,31 @@ export function UploadWarehouseModal({
                             }
                             className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs"
                           />
+                        </td>
+                        <td className="py-1.5 px-2">
+                          <select
+                            value={r.warehouseName || defaultWarehouse}
+                            onChange={(e) =>
+                              handleUpdateRow(
+                                i,
+                                'warehouseName',
+                                e.target.value
+                              )
+                            }
+                            className="w-full bg-slate-50 border border-slate-200 rounded px-1.5 py-1 text-xs font-semibold"
+                          >
+                            {r.warehouseName &&
+                              !WAREHOUSE_NAMES.includes(r.warehouseName) && (
+                                <option value={r.warehouseName}>
+                                  {r.warehouseName}
+                                </option>
+                              )}
+                            {WAREHOUSE_NAMES.map((wh) => (
+                              <option key={wh} value={wh}>
+                                {wh}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td className="py-1.5 px-2">
                           <input

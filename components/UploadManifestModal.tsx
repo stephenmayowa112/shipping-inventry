@@ -23,7 +23,7 @@ import {
   getLastOperatorName,
   formatMoney,
 } from '@/lib/storage';
-import { TakenStatus } from '@/lib/types';
+import { TakenStatus, WAREHOUSE_NAMES } from '@/lib/types';
 import { downloadManifestTemplateExcel } from '@/lib/exportUtils';
 
 interface UploadManifestModalProps {
@@ -423,7 +423,9 @@ export function UploadManifestModal({
   const [containerName, setContainerName] = useState(
     targetContainerName || 'Container 1'
   );
-  const [warehouse, setWarehouse] = useState(defaultWarehouse || '');
+  const [warehouse, setWarehouse] = useState(
+    defaultWarehouse || WAREHOUSE_NAMES[0]
+  );
   const [personName, setPersonName] = useState(() => getLastOperatorName() || 'Staff');
 
   const [fileName, setFileName] = useState<string>('');
@@ -850,13 +852,20 @@ export function UploadManifestModal({
                 <Warehouse className="w-3.5 h-3.5 text-slate-500" />
                 <span>Warehouse</span>
               </label>
-              <input
-                type="text"
+              <select
                 value={warehouse}
                 onChange={(e) => setWarehouse(e.target.value)}
-                placeholder="Enter warehouse location"
-                className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-900 focus:outline-none focus:border-slate-900 min-h-[42px]"
-              />
+                className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 focus:outline-none focus:border-slate-900 min-h-[42px]"
+              >
+                {warehouse && !WAREHOUSE_NAMES.includes(warehouse) && (
+                  <option value={warehouse}>{warehouse}</option>
+                )}
+                {WAREHOUSE_NAMES.map((wh) => (
+                  <option key={wh} value={wh}>
+                    {wh}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

@@ -9,6 +9,7 @@ import {
   WarehouseHistory,
   GoodsCondition,
   ConfirmationStatus,
+  WAREHOUSE_NAMES,
 } from './types';
 
 const STORAGE_KEY = 'deep_down_containers_handover_v1';
@@ -49,7 +50,7 @@ export const INITIAL_CONTAINERS: Container[] = [
   {
     id: 'cnt-1',
     name: 'Container 1',
-    warehouse: 'Main Warehouse',
+    warehouse: 'Kotonu',
     note: 'General Merchandise & Electronics',
     createdBy: 'Stephen Mayowa',
     updatedBy: 'Stephen Mayowa',
@@ -71,7 +72,7 @@ export const INITIAL_CONTAINERS: Container[] = [
         receiverName: 'Suleiman Musa',
         receiverPhone: '0806 112 3344',
         receiverDate: '2026-10-27',
-        warehouse: 'Main Warehouse',
+        warehouse: 'Kotonu',
         addedDate: '2026-10-20',
         lastUpdated: '2026-10-27 15:20',
         addedBy: 'Stephen Mayowa',
@@ -92,7 +93,7 @@ export const INITIAL_CONTAINERS: Container[] = [
         receiverName: 'Emeka Okafor',
         receiverPhone: '0813 400 7788',
         receiverDate: '2026-10-28',
-        warehouse: 'Main Warehouse',
+        warehouse: 'Kotonu',
         addedDate: '2026-10-20',
         lastUpdated: '2026-10-28 11:45',
         addedBy: 'Stephen Mayowa',
@@ -113,7 +114,7 @@ export const INITIAL_CONTAINERS: Container[] = [
         receiverName: '',
         receiverPhone: '',
         receiverDate: '',
-        warehouse: 'Main Warehouse',
+        warehouse: 'Kotonu',
         addedDate: '2026-10-21',
         lastUpdated: '2026-10-21 09:30',
         addedBy: 'Stephen Mayowa',
@@ -148,7 +149,7 @@ export const INITIAL_CONTAINERS: Container[] = [
   {
     id: 'cnt-2',
     name: 'Container 2',
-    warehouse: 'Main Warehouse',
+    warehouse: 'Masalachi first',
     note: 'Hardware, Auto Parts & Building Materials',
     createdBy: 'Michael Ade',
     updatedBy: 'Michael Ade',
@@ -170,7 +171,7 @@ export const INITIAL_CONTAINERS: Container[] = [
         receiverName: 'Tunde Bakare',
         receiverPhone: '0805 667 8899',
         receiverDate: '2026-10-28',
-        warehouse: 'Main Warehouse',
+        warehouse: 'Masalachi first',
         addedDate: '2026-10-23',
         lastUpdated: '2026-10-28 16:10',
         addedBy: 'Michael Ade',
@@ -191,7 +192,7 @@ export const INITIAL_CONTAINERS: Container[] = [
         receiverName: '',
         receiverPhone: '',
         receiverDate: '',
-        warehouse: 'Main Warehouse',
+        warehouse: 'Masalachi first',
         addedDate: '2026-10-24',
         lastUpdated: '2026-10-24 12:00',
         addedBy: 'Michael Ade',
@@ -262,7 +263,31 @@ export function getContainers(): Container[] {
       cachedRaw = raw;
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        cachedContainers = parsed;
+        let migrated = false;
+        const normalized = parsed.map((c: Container, idx: number) => {
+          const fallbackWh = WAREHOUSE_NAMES[idx % WAREHOUSE_NAMES.length] || WAREHOUSE_NAMES[0];
+          const updatedWh =
+            !c.warehouse || c.warehouse === 'Main Warehouse'
+              ? fallbackWh
+              : c.warehouse;
+          if (updatedWh !== c.warehouse) migrated = true;
+          const items = Array.isArray(c.items)
+            ? c.items.map((item) => {
+                if (!item.warehouse || item.warehouse === 'Main Warehouse') {
+                  migrated = true;
+                  return { ...item, warehouse: updatedWh };
+                }
+                return item;
+              })
+            : [];
+          return { ...c, warehouse: updatedWh, items };
+        });
+        cachedContainers = normalized;
+        if (migrated) {
+          const serialized = JSON.stringify(normalized);
+          window.localStorage.setItem(STORAGE_KEY, serialized);
+          cachedRaw = serialized;
+        }
       } else {
         cachedContainers = INITIAL_CONTAINERS;
       }
@@ -853,7 +878,7 @@ export const INITIAL_WAREHOUSE_RECORDS: WarehouseRecord[] = [
     containerName: 'Container 1',
     takeoutFromContainer: '95 Total Packages Offloaded (45 Cartons, 30 Boxes, 20 Bales)',
     takeoutFromWarehouse: '57 Packages Dispatched (45 Cartons + 12 Boxes Taken)',
-    warehouseName: 'Main Warehouse',
+    warehouseName: 'Kotonu',
     offloaderName: 'Ibrahim Danjuma',
     personName: 'Stephen Mayowa',
     confirmationStatus: 'Confirmed',
@@ -874,7 +899,7 @@ export const INITIAL_WAREHOUSE_RECORDS: WarehouseRecord[] = [
     containerName: 'Container 2',
     takeoutFromContainer: '43 Total Units Offloaded (25 Pallets, 18 Crates)',
     takeoutFromWarehouse: '15 Pallets Dispatched to Receiver',
-    warehouseName: 'Main Warehouse',
+    warehouseName: 'Masalachi first',
     offloaderName: 'Sunday Eze',
     personName: 'Michael Ade',
     confirmationStatus: 'Pending',
@@ -958,9 +983,28 @@ export function getWarehouseRecords(): WarehouseRecord[] {
     if (raw !== cachedWarehouseRaw || !cachedWarehouseRecords) {
       cachedWarehouseRaw = raw;
       const parsed = JSON.parse(raw);
-      cachedWarehouseRecords = Array.isArray(parsed)
-        ? parsed
-        : INITIAL_WAREHOUSE_RECORDS;
+      if (Array.isArray(parsed)) {
+        let migrated = false;
+        const normalized = parsed.map((r: WarehouseRecord, idx: number) => {
+          if (!r.warehouseName || r.warehouseName === 'Main Warehouse') {
+            migrated = true;
+            return {
+              ...r,
+              warehouseName:
+                WAREHOUSE_NAMES[idx % WAREHOUSE_NAMES.length] || WAREHOUSE_NAMES[0],
+            };
+          }
+          return r;
+        });
+        cachedWarehouseRecords = normalized;
+        if (migrated) {
+          const serialized = JSON.stringify(normalized);
+          window.localStorage.setItem(WAREHOUSE_STORAGE_KEY, serialized);
+          cachedWarehouseRaw = serialized;
+        }
+      } else {
+        cachedWarehouseRecords = INITIAL_WAREHOUSE_RECORDS;
+      }
     }
   } catch {
     cachedWarehouseRecords = INITIAL_WAREHOUSE_RECORDS;
@@ -1031,7 +1075,7 @@ export function addWarehouseRecord(input: WarehouseRecordInput): WarehouseRecord
     containerName,
     takeoutFromContainer: input.takeoutFromContainer.trim() || '-',
     takeoutFromWarehouse: input.takeoutFromWarehouse.trim() || 'None yet',
-    warehouseName: input.warehouseName.trim() || 'Main Warehouse',
+    warehouseName: input.warehouseName.trim() || WAREHOUSE_NAMES[0],
     offloaderName: input.offloaderName.trim() || '-',
     personName: person,
     confirmationStatus: input.confirmationStatus,
@@ -1254,7 +1298,7 @@ export function importWarehouseRecords(
       warehouseName:
         (r.warehouseName || '').trim() ||
         options.defaultWarehouseName.trim() ||
-        'Main Warehouse',
+        WAREHOUSE_NAMES[0],
       offloaderName: (r.offloaderName || '').trim() || '-',
       personName: (r.personName || '').trim() || person,
       confirmationStatus,

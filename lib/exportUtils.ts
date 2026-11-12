@@ -395,7 +395,7 @@ export function downloadManifestTemplateExcel(defaultContainerName = 'Container 
       '9a. Receiver Name': '',
       '9b. Receiver Phone': '',
       '9c. Receiver Date': '',
-      '10. Warehouse': 'Main Warehouse',
+      '10. Warehouse': 'Kotonu',
     },
     {
       '1. Container': defaultContainerName,
@@ -409,7 +409,7 @@ export function downloadManifestTemplateExcel(defaultContainerName = 'Container 
       '9a. Receiver Name': 'Emeka Okafor',
       '9b. Receiver Phone': '0813 400 7788',
       '9c. Receiver Date': new Date().toISOString().split('T')[0],
-      '10. Warehouse': 'Main Warehouse',
+      '10. Warehouse': 'Masalachi first',
     },
   ];
 
@@ -635,7 +635,7 @@ export function downloadWarehouseTemplateExcel(): void {
       'Container Name': 'Container 1',
       '3. Takeout from Container': '95 Total Packages Offloaded',
       '4. Takeout from Warehouse': '57 Packages Dispatched',
-      '5a. Name of Warehouse': 'Main Warehouse',
+      '5a. Name of Warehouse': 'Kotonu',
       '5b. Container Offloader': 'Ibrahim Danjuma',
       '6. Name of Person': 'Stephen Mayowa',
       '7. Confirmation': 'Confirmed',
@@ -650,7 +650,7 @@ export function downloadWarehouseTemplateExcel(): void {
       'Container Name': 'Container 2',
       '3. Takeout from Container': '43 Total Units Offloaded',
       '4. Takeout from Warehouse': '15 Pallets Dispatched',
-      '5a. Name of Warehouse': 'Main Warehouse',
+      '5a. Name of Warehouse': 'Masalachi first',
       '5b. Container Offloader': 'Sunday Eze',
       '6. Name of Person': 'Michael Ade',
       '7. Confirmation': 'Pending',

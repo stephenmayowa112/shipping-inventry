@@ -19,6 +19,7 @@ import {
   Container,
   WarehouseRecord,
   WarehouseHistory,
+  WAREHOUSE_NAMES,
 } from '@/lib/types';
 import {
   updateWarehouseRecord,
@@ -44,6 +45,7 @@ export function WarehouseInventoryView({
   searchQuery,
   onNotify,
 }: WarehouseInventoryViewProps) {
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<WarehouseRecord | null>(
     null
@@ -55,8 +57,14 @@ export function WarehouseInventoryView({
     () => getLastOperatorName() || ''
   );
 
-  // Filter records by search query
+  // Filter records by selected warehouse and search query
   const filteredRecords = records.filter((r) => {
+    if (
+      selectedWarehouse &&
+      r.warehouseName.toLowerCase() !== selectedWarehouse.toLowerCase()
+    ) {
+      return false;
+    }
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -102,9 +110,25 @@ export function WarehouseInventoryView({
     <div className="space-y-4 sm:space-y-6 pb-10">
       {/* Clean Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5">
-        <h1 className="text-xl sm:text-2xl font-black text-slate-900">
-          Warehouse Records
-        </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900">
+            Warehouse Records
+          </h1>
+
+          <select
+            value={selectedWarehouse}
+            onChange={(e) => setSelectedWarehouse(e.target.value)}
+            aria-label="Filter by Warehouse"
+            className="bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:bg-white focus:border-slate-900 min-h-[44px]"
+          >
+            <option value="">All Warehouses</option>
+            {WAREHOUSE_NAMES.map((wh) => (
+              <option key={wh} value={wh}>
+                {wh}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="grid grid-cols-1 sm:flex items-center gap-2.5">
           <button
@@ -221,7 +245,7 @@ export function WarehouseInventoryView({
                       {/* Name of Warehouse / Container Offloader */}
                       <td className="py-3.5 px-3 max-w-[190px]">
                         <div className="text-xs font-bold text-slate-900">
-                          {rec.warehouseName || 'Main Warehouse'}
+                          {rec.warehouseName || WAREHOUSE_NAMES[0]}
                         </div>
                         <div className="text-xs text-slate-600 mt-0.5">
                           Offloader:{' '}
@@ -596,6 +620,7 @@ export function WarehouseInventoryView({
             setEditingRecord(null);
           }}
           containers={containers}
+          defaultWarehouse={selectedWarehouse || WAREHOUSE_NAMES[0]}
           editingRecord={editingRecord}
           onSaved={(msg) => onNotify(msg)}
         />
@@ -606,6 +631,7 @@ export function WarehouseInventoryView({
         <UploadWarehouseModal
           isOpen={isUploadModalOpen}
           onClose={() => setIsUploadModalOpen(false)}
+          defaultWarehouse={selectedWarehouse || WAREHOUSE_NAMES[0]}
           onImported={(count) =>
             onNotify(`Imported ${count} warehouse records.`)
           }
