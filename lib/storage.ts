@@ -636,7 +636,25 @@ export function importManifestRecords(
   const nowStr = nowIso.replace('T', ' ').substring(0, 16);
   const dateOnly = nowStr.split(' ')[0];
 
-  const validRows = rows.filter((r) => r.name && r.name.trim().length > 0);
+  // Ensure all rows are preserved even if customer name was not in the manifest yet
+  const validRows = rows
+    .filter((r) => {
+      // Keep row if it has any data
+      const hasAnyField =
+        (r.name && r.name.trim().length > 0) ||
+        (r.phone && r.phone.trim().length > 0) ||
+        (r.cbm !== undefined && Number(r.cbm) > 0) ||
+        (r.amount !== undefined && Number(r.amount) > 0) ||
+        (r.paid !== undefined && Number(r.paid) > 0) ||
+        (r.receiverName && r.receiverName.trim().length > 0) ||
+        (r.taken && r.taken.trim().length > 0);
+      return hasAnyField;
+    })
+    .map((r, i) => ({
+      ...r,
+      name: (r.name || '').trim() || `Customer ${i + 1}`,
+    }));
+
   if (validRows.length === 0) return options.targetContainerId || '';
 
   const containers = [...getContainers()];

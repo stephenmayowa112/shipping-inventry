@@ -1,14 +1,153 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    },
-  },
-});
+function parseTextLinesFallback(textContent: string): Array<Record<string, unknown>> {
+  if (!textContent || !textContent.trim()) return [];
+
+  const lines = textContent
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !/^[-=_,.]{3,}$/.test(l));
+
+  if (lines.length === 0) return [];
+
+  const rows: Array<Record<string, unknown>> = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Skip table header repeats or total lines
+    if (/^(s\/?n|total|grand total|subtotal|page\s+\d)/i.test(line)) {
+      continue;
+    }
+
+    // Determine separator: tab, comma, semicolon, pipe
+    let parts: string[] = [];
+    if (line.includes('\t')) {
+      parts = line.split('\t');
+    } else if (line.includes('|')) {
+      parts = line.split('|');
+    } else if (line.includes(';') && line.split(';').length >= 2) {
+      parts = line.split(';');
+    } else if (line.includes(',')) {
+      // Split by comma, respecting quotes
+      parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+    } else {
+      parts = [line];
+    }
+
+    parts = parts.map((p) => p.replace(/^"|"$/g, '').trim()).filter((p) => p !== '');
+    if (parts.length === 0) continue;
+
+    // Check if parts look like a header
+    const joined = parts.join(' ').toLowerCase();
+    if (
+      /name|customer|cbm|amount|paid|credit|receiver|consignee/i.test(joined) &&
+      i === 0
+    ) {
+      continue;
+    }
+
+    let name = '';
+    let phone = '';
+    let cbm = 0;
+    let amount = 0;
+    let paid = 0;
+    let credit = 0;
+    let containerName = '';
+    let warehouse = '';
+    let receiverName = '';
+    let taken = 'Not Taken';
+
+    // Parse columns by characteristics
+    const remainingText: string[] = [];
+
+    parts.forEach((p) => {
+      // Clean numbers
+      const numClean = p.replace(/[^0-9.-]/g, '');
+      const numVal = parseFloat(numClean);
+
+      // Check phone number (starts with +, 0, or has 8-15 digits)
+      if (
+        !phone &&
+        /^[+]?[\d\s-]{8,18}$/.test(p) &&
+        /\d{4,}/.test(p)
+      ) {
+        phone = p;
+        return;
+      }
+
+      // Check container
+      if (!containerName && /^(container|cont|cnt)\s*[\w-]+/i.test(p)) {
+        containerName = p;
+        return;
+      }
+
+      // Check status
+      if (/taken|collected|partial|pending/i.test(p)) {
+        taken = p;
+        return;
+      }
+
+      // Check number
+      if (!Number.isNaN(numVal) && numClean.length > 0) {
+        if (!cbm && numVal > 0 && numVal <= 150 && (p.includes('.') || numVal < 50)) {
+          cbm = numVal;
+          return;
+        }
+        if (!amount && numVal > 0) {
+          amount = numVal;
+          return;
+        }
+        if (!paid && amount > 0 && numVal <= amount) {
+          paid = numVal;
+          return;
+        }
+      }
+
+      // Text string
+      remainingText.push(p);
+    });
+
+    if (remainingText.length > 0) {
+      name = remainingText[0];
+      if (remainingText.length > 1 && !receiverName) {
+        receiverName = remainingText[1];
+      }
+      if (remainingText.length > 2 && !warehouse) {
+        warehouse = remainingText[2];
+      }
+    }
+
+    if (!name) {
+      name = `Customer ${rows.length + 1}`;
+    }
+
+    credit = Math.max(0, amount - paid);
+
+    rows.push({
+      containerName,
+      name,
+      phone,
+      cbm,
+      amount,
+      takenStatus: taken.toLowerCase().includes('partial')
+        ? 'Partial'
+        : taken.toLowerCase().includes('taken') || taken.toLowerCase().includes('collect')
+        ? 'Taken'
+        : 'Not Taken',
+      taken,
+      paid,
+      credit,
+      receiverName,
+      receiverPhone: '',
+      receiverDate: '',
+      warehouse,
+    });
+  }
+
+  return rows;
+}
 
 const manifestResponseSchema = {
   type: Type.OBJECT,
@@ -29,58 +168,57 @@ const manifestResponseSchema = {
         properties: {
           containerName: {
             type: Type.STRING,
-            description: '1. Container name or number for this row (if specified).',
+            description: 'Container name or number for this row (if specified).',
           },
           name: {
             type: Type.STRING,
-            description: '2. Customer or cargo owner name.',
+            description: 'Customer or cargo owner name, or item/goods description.',
           },
           phone: {
             type: Type.STRING,
-            description: '3. Customer phone number.',
+            description: 'Customer phone number if available.',
           },
           cbm: {
             type: Type.NUMBER,
-            description: '4. CBM (Cubic meters volume) as a number.',
+            description: 'CBM (Cubic meters volume) as a number if available.',
           },
           amount: {
             type: Type.NUMBER,
-            description: '5. Total financial amount/charge as a number.',
+            description: 'Total financial amount/charge as a number if available.',
           },
           takenStatus: {
             type: Type.STRING,
-            description: '6a. Status of collection: must be one of "Not Taken", "Partial", or "Taken".',
+            description: 'Status of collection: "Not Taken", "Partial", or "Taken".',
           },
           taken: {
             type: Type.STRING,
-            description: '6b. Taken description or quantity collected (e.g. "Not Taken", "All Collected", "10 of 20 Cartons").',
+            description: 'Taken description or quantity collected (default "Not Taken").',
           },
           paid: {
             type: Type.NUMBER,
-            description: '7. Amount paid so far as a number.',
+            description: 'Amount paid so far as a number.',
           },
           credit: {
             type: Type.NUMBER,
-            description: '8. Credit or balance owed (Amount minus Paid) as a number.',
+            description: 'Credit or balance owed as a number.',
           },
           receiverName: {
             type: Type.STRING,
-            description: "9a. Receiver's name (person who collected the goods, if any).",
+            description: "Receiver's name if collected.",
           },
           receiverPhone: {
             type: Type.STRING,
-            description: "9b. Receiver's phone number (if any).",
+            description: "Receiver's phone number if available.",
           },
           receiverDate: {
             type: Type.STRING,
-            description: "9c. Receiver's collection date in YYYY-MM-DD format (if any).",
+            description: "Receiver's collection date in YYYY-MM-DD format if available.",
           },
           warehouse: {
             type: Type.STRING,
-            description: '10. Warehouse name or location (if specified).',
+            description: 'Warehouse name or location if specified.',
           },
         },
-        required: ['name'],
       },
     },
   },
@@ -98,58 +236,57 @@ const warehouseResponseSchema = {
         properties: {
           goodsInStock: {
             type: Type.STRING,
-            description: '1. Goods in-stock (description and quantity currently in stock).',
+            description: 'Goods in-stock (description and quantity currently in stock).',
           },
           goodsArrivalDate: {
             type: Type.STRING,
-            description: '2. Goods arrival date in YYYY-MM-DD format.',
+            description: 'Goods arrival date in YYYY-MM-DD format.',
           },
           containerName: {
             type: Type.STRING,
-            description: '3a. Container name or number the goods were taken out of.',
+            description: 'Container name or number the goods were taken out of.',
           },
           takeoutFromContainer: {
             type: Type.STRING,
-            description: '3b. Takeout from container (goods offloaded/taken out of that container).',
+            description: 'Takeout from container (goods offloaded/taken out of that container).',
           },
           takeoutFromWarehouse: {
             type: Type.STRING,
-            description: '4. Takeout from warehouse (goods dispatched/removed from warehouse).',
+            description: 'Takeout from warehouse (goods dispatched/removed from warehouse).',
           },
           warehouseName: {
             type: Type.STRING,
-            description: '5a. Name of warehouse.',
+            description: 'Name of warehouse.',
           },
           offloaderName: {
             type: Type.STRING,
-            description: '5b. Name of container offloader (person who offloaded the container).',
+            description: 'Name of container offloader.',
           },
           personName: {
             type: Type.STRING,
-            description: '6. Name of person (staff recording or responsible).',
+            description: 'Name of person (staff recording or responsible).',
           },
           confirmationStatus: {
             type: Type.STRING,
-            description: '7. Confirmation status: "Confirmed" or "Pending".',
+            description: 'Confirmation status: "Confirmed" or "Pending".',
           },
           goodsCondition: {
             type: Type.STRING,
-            description: '8a. Goods condition: "Good", "Damaged", or "Part Damaged".',
+            description: 'Goods condition: "Good", "Damaged", or "Part Damaged".',
           },
           conditionDetails: {
             type: Type.STRING,
-            description: '8b. Details about good or damaged condition.',
+            description: 'Details about good or damaged condition.',
           },
           unaccountedDetails: {
             type: Type.STRING,
-            description: '9. Unaccounted / missing goods in that container (or "None (0 Missing)").',
+            description: 'Unaccounted / missing goods in that container.',
           },
           credit: {
             type: Type.NUMBER,
-            description: '10. Credit amount for that container as a clean number.',
+            description: 'Credit amount for that container as a clean number.',
           },
         },
-        required: ['goodsInStock'],
       },
     },
   },
@@ -157,88 +294,105 @@ const warehouseResponseSchema = {
 };
 
 export async function POST(req: NextRequest) {
+  let body: {
+    textContent?: string;
+    fileBase64?: string;
+    mimeType?: string;
+    mode?: 'customer' | 'warehouse';
+  } = {};
+
   try {
-    const body = await req.json();
-    const { textContent, fileBase64, mimeType, mode } = body as {
-      textContent?: string;
-      fileBase64?: string;
-      mimeType?: string;
-      mode?: 'customer' | 'warehouse';
-    };
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ rows: [] });
+  }
 
-    const isWarehouse = mode === 'warehouse';
+  const { textContent, fileBase64, mimeType, mode } = body;
+  const isWarehouse = mode === 'warehouse';
 
-    const systemInstruction = isWarehouse
-      ? `You are a warehouse inventory extraction assistant for Deep Down Logistics.
-Extract all warehouse inventory rows into the 10 standard warehouse fields:
-1. Goods in-stock (goodsInStock)
-2. Goods arrival date (goodsArrivalDate in YYYY-MM-DD)
-3. Takeout from container (containerName and takeoutFromContainer)
-4. Takeout from warehouse (takeoutFromWarehouse)
-5. Name of warehouse / container offloader (warehouseName and offloaderName)
-6. Name of person (personName)
-7. Confirmation (confirmationStatus: "Confirmed" | "Pending")
-8. Goods condition (goodsCondition: "Good" | "Damaged" | "Part Damaged", and conditionDetails)
-9. Unaccounted / missing goods (unaccountedDetails, default to "None (0 Missing)" if none)
-10. Credit (credit as a clean number without currency symbols or commas)
-Ignore empty rows or grand totals. Return clean JSON.`
-      : `You are a logistics manifest extraction assistant for Deep Down Logistics.
-Extract all customer cargo rows from the provided manifest into the 10 standard fields:
-1. Container (containerName)
-2. Name (Customer / Cargo Owner Name)
-3. Phone Number (phone)
-4. CBM (cbm - numeric volume)
-5. Amount (amount - total charge/cost as a clean number without currency symbols or commas)
-6. Taken (takenStatus: "Not Taken" | "Partial" | "Taken", and taken: description/quantity collected, default to "Not Taken" if not specified)
-7. Paid (paid - amount paid as a clean number, default to 0 if not specified)
-8. Credit (credit - balance owed, calculated as amount - paid if not explicitly given)
-9. Receiver's Details (receiverName, receiverPhone, receiverDate)
-10. Warehouse (warehouse location if mentioned)
+  const apiKey = process.env.GEMINI_API_KEY || '';
+  const hasValidApiKey =
+    apiKey.trim().length > 5 && apiKey !== 'MY_GEMINI_API_KEY';
 
-Ignore empty rows, subtotals, or grand total summary rows. Return clean structured JSON.`;
-
-    const contents: Array<
-      | string
-      | { inlineData: { data: string; mimeType: string } }
-    > = [];
-
-    if (fileBase64 && mimeType) {
-      contents.push({
-        inlineData: {
-          data: fileBase64,
-          mimeType,
+  // If Gemini API is available, attempt AI extraction
+  if (hasValidApiKey) {
+    try {
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          },
         },
       });
+
+      const systemInstruction = isWarehouse
+        ? `You are a warehouse inventory extraction assistant for Deep Down Logistics.
+Extract all warehouse inventory rows into fields:
+goodsInStock, goodsArrivalDate (YYYY-MM-DD), containerName, takeoutFromContainer, takeoutFromWarehouse, warehouseName, offloaderName, personName, confirmationStatus ("Confirmed"|"Pending"), goodsCondition ("Good"|"Damaged"|"Part Damaged"), conditionDetails, unaccountedDetails, credit.
+Even if some fields are missing or not present in the document, extract every row and leave missing fields as empty strings or 0. Return structured JSON.`
+        : `You are a logistics manifest extraction assistant for Deep Down Logistics.
+Extract all cargo rows from the provided manifest into:
+containerName, name (Customer or item/goods description), phone, cbm (number), amount (number), takenStatus ("Not Taken"|"Partial"|"Taken"), taken, paid (number), credit (number, or amount - paid), receiverName, receiverPhone, receiverDate, warehouse.
+IMPORTANT: Some info might not be in the manifest. Extract every row with whatever information is available. If customer name is missing, use the goods/cargo description or label as "Customer 1", "Customer 2". Leave any missing info as empty strings or 0 so staff can fill them in later. Return structured JSON.`;
+
+      const contents: Array<
+        | string
+        | { inlineData: { data: string; mimeType: string } }
+      > = [];
+
+      if (fileBase64 && mimeType) {
+        contents.push({
+          inlineData: {
+            data: fileBase64,
+            mimeType,
+          },
+        });
+      }
+
+      if (textContent) {
+        contents.push(
+          `Extract all rows from this manifest data:\n\n${textContent}`
+        );
+      } else {
+        contents.push(
+          `Extract all cargo records from this uploaded document.`
+        );
+      }
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents,
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: isWarehouse
+            ? warehouseResponseSchema
+            : manifestResponseSchema,
+        },
+      });
+
+      const rawText = response.text || '{"rows":[]}';
+      const parsed = JSON.parse(rawText);
+      const rows = Array.isArray(parsed.rows) ? parsed.rows : [];
+
+      if (rows.length > 0) {
+        return NextResponse.json(parsed);
+      }
+    } catch (aiErr) {
+      console.warn('Gemini manifest extraction encountered error, using local fallback:', aiErr);
     }
-
-    if (textContent) {
-      contents.push(
-        `Extract all ${isWarehouse ? 'warehouse inventory' : 'manifest customer cargo'} records from the following data:\n\n${textContent}`
-      );
-    } else {
-      contents.push(
-        `Extract all ${isWarehouse ? 'warehouse inventory' : 'manifest customer cargo'} records from this uploaded document.`
-      );
-    }
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents,
-      config: {
-        systemInstruction,
-        responseMimeType: 'application/json',
-        responseSchema: isWarehouse
-          ? warehouseResponseSchema
-          : manifestResponseSchema,
-      },
-    });
-
-    const rawText = response.text || '{"rows":[]}';
-    const parsed = JSON.parse(rawText);
-    return NextResponse.json(parsed);
-  } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : 'Failed to parse uploaded file.';
-    return NextResponse.json({ error: message }, { status: 500 });
   }
+
+  // Graceful fallback for text/csv content (always succeeds with 200 OK)
+  if (textContent && textContent.trim()) {
+    const fallbackRows = parseTextLinesFallback(textContent);
+    return NextResponse.json({
+      rows: fallbackRows,
+      detectedContainerName: '',
+      detectedWarehouse: '',
+    });
+  }
+
+  return NextResponse.json({ rows: [] });
 }
