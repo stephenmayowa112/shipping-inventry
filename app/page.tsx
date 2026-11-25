@@ -12,12 +12,21 @@ import {
   INITIAL_WAREHOUSE_RECORDS,
   INITIAL_WAREHOUSE_HISTORY,
 } from '@/lib/storage';
+import {
+  getCurrentStaffSession,
+  subscribeToAuth,
+  signOutStaff,
+} from '@/lib/cloudSync';
 import { SimpleNavbar, InventoryMode } from '@/components/SimpleNavbar';
 import { ContainerList } from '@/components/ContainerList';
 import { ContainerDetailView } from '@/components/ContainerDetailView';
 import { AddContainerModal } from '@/components/AddContainerModal';
 import { UploadManifestModal } from '@/components/UploadManifestModal';
 import { WarehouseInventoryView } from '@/components/WarehouseInventoryView';
+import {
+  LoginScreen,
+  DatabaseAccessModal,
+} from '@/components/AuthGateAndDbModal';
 
 const emptySubscribe = () => () => {};
 
@@ -26,6 +35,12 @@ export default function Home() {
     emptySubscribe,
     () => true,
     () => false
+  );
+
+  const session = useSyncExternalStore(
+    subscribeToAuth,
+    getCurrentStaffSession,
+    () => null
   );
 
   const rawContainers = useSyncExternalStore(
@@ -60,6 +75,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddContainerOpen, setIsAddContainerOpen] = useState(false);
   const [isUploadManifestOpen, setIsUploadManifestOpen] = useState(false);
+  const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   const selectedContainer =
@@ -69,6 +85,10 @@ export default function Home() {
     setNoticeMessage(msg);
     setTimeout(() => setNoticeMessage(null), 4000);
   };
+
+  if (isMounted && !session) {
+    return <LoginScreen onSignedIn={showNotice} />;
+  }
 
   const handleResetDemo = () => {
     resetToDemoData();
@@ -110,6 +130,11 @@ export default function Home() {
         onSearchChange={setSearchQuery}
         onGoHome={() => {
           setSelectedContainerId(null);
+        }}
+        session={session}
+        onOpenDatabaseModal={() => setIsDatabaseModalOpen(true)}
+        onSignOut={() => {
+          signOutStaff();
         }}
       />
 
@@ -156,6 +181,13 @@ export default function Home() {
 
           <div className="flex items-center gap-4">
             <button
+              type="button"
+              onClick={() => setIsDatabaseModalOpen(true)}
+              className="text-slate-700 hover:text-slate-900 hover:underline font-bold"
+            >
+              Database & Staff Logins
+            </button>
+            <button
               onClick={handleClearAll}
               className="text-slate-500 hover:text-rose-600 hover:underline font-semibold"
             >
@@ -185,6 +217,15 @@ export default function Home() {
           targetContainerName={selectedContainer?.name}
           defaultWarehouse={selectedContainer?.warehouse || ''}
           onManifestImported={handleManifestImported}
+        />
+      )}
+
+      {session && isDatabaseModalOpen && (
+        <DatabaseAccessModal
+          isOpen={isDatabaseModalOpen}
+          onClose={() => setIsDatabaseModalOpen(false)}
+          session={session}
+          onNotify={showNotice}
         />
       )}
     </div>

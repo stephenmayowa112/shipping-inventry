@@ -11,6 +11,19 @@ import {
   ConfirmationStatus,
   WAREHOUSE_NAMES,
 } from './types';
+import {
+  isCloudReadyForWrite,
+  saveContainerHeaderToCloud,
+  saveCargoItemToCloud,
+  saveItemHistoryToCloud,
+  deleteCargoItemFromCloud,
+  deleteContainerFromCloud,
+  saveWarehouseRecordToCloud,
+  saveWarehouseHistoryToCloud,
+  deleteWarehouseRecordFromCloud,
+  pushAllLocalDataToCloud,
+  fetchAllFromCloud,
+} from './cloudSync';
 
 const STORAGE_KEY = 'deep_down_containers_handover_v1';
 const WAREHOUSE_STORAGE_KEY = 'deep_down_warehouse_records_v1';
@@ -340,6 +353,17 @@ export function addContainer(
 
   containers.unshift(newContainer);
   saveContainers(containers);
+
+  if (isCloudReadyForWrite()) {
+    saveContainerHeaderToCloud(newContainer, true)
+      .then(() => {
+        if (newContainer.history[0]) {
+          return saveItemHistoryToCloud(newContainer.id, newContainer.history[0]);
+        }
+      })
+      .catch(() => {});
+  }
+
   return newContainer;
 }
 
@@ -353,6 +377,9 @@ export function updateContainer(
   const person = personName.trim() || 'Staff';
   saveLastOperatorName(person);
   const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+  let updatedContainerRef: Container | null = null;
+  let newHistRef: ItemHistory | null = null;
 
   const containers = getContainers().map((c) => {
     if (c.id !== id) return c;
@@ -378,7 +405,7 @@ export function updateContainer(
       date: nowStr,
     };
 
-    return {
+    const updatedObj: Container = {
       ...c,
       name: cleanName,
       warehouse: cleanWarehouse,
@@ -388,14 +415,33 @@ export function updateContainer(
       items: updatedItems,
       history: [historyEntry, ...c.history],
     };
+
+    updatedContainerRef = updatedObj;
+    newHistRef = historyEntry;
+    return updatedObj;
   });
 
   saveContainers(containers);
+
+  if (isCloudReadyForWrite() && updatedContainerRef) {
+    const cRef = updatedContainerRef as Container;
+    const hRef = newHistRef as ItemHistory | null;
+    saveContainerHeaderToCloud(cRef, false)
+      .then(() => {
+        if (hRef) {
+          return saveItemHistoryToCloud(cRef.id, hRef);
+        }
+      })
+      .catch(() => {});
+  }
 }
 
 export function deleteContainer(id: string): void {
   const containers = getContainers().filter((c) => c.id !== id);
   saveContainers(containers);
+  if (isCloudReadyForWrite()) {
+    deleteContainerFromCloud(id).catch(() => {});
+  }
 }
 
 export interface CargoInputData {
@@ -469,13 +515,22 @@ export function addCargoItem(containerId: string, input: CargoInputData): void {
       date: nowStr,
     };
 
-    return {
+    const updatedC: Container = {
       ...c,
       updatedBy: person,
       items: [newItem, ...c.items],
       history: [newHistory, ...c.history],
       updatedAt: new Date().toISOString(),
     };
+
+    if (isCloudReadyForWrite()) {
+      saveContainerHeaderToCloud(updatedC, false)
+        .then(() => saveCargoItemToCloud(updatedC.id, newItem, true))
+        .then(() => saveItemHistoryToCloud(updatedC.id, newHistory))
+        .catch(() => {});
+    }
+
+    return updatedC;
   });
 
   saveContainers(containers);
@@ -602,13 +657,22 @@ export function updateCargoItem(
       date: nowStr,
     };
 
-    return {
+    const updatedC: Container = {
       ...c,
       updatedBy: person,
       items: updatedItems,
       history: [historyEntry, ...c.history],
       updatedAt: new Date().toISOString(),
     };
+
+    if (isCloudReadyForWrite()) {
+      saveContainerHeaderToCloud(updatedC, false)
+        .then(() => saveCargoItemToCloud(updatedC.id, updatedItem, false))
+        .then(() => saveItemHistoryToCloud(updatedC.id, historyEntry))
+        .catch(() => {});
+    }
+
+    return updatedC;
   });
 
   saveContainers(containers);
@@ -624,6 +688,9 @@ export function deleteItem(containerId: string, itemId: string): void {
     };
   });
   saveContainers(containers);
+  if (isCloudReadyForWrite()) {
+    deleteCargoItemFromCloud(containerId, itemId).catch(() => {});
+  }
 }
 
 export const deleteItemFromContainer = deleteItem;
@@ -863,6 +930,15 @@ export function importManifestRecords(
   }
 
   saveContainers(containers);
+
+  if (isCloudReadyForWrite()) {
+    pushAllLocalDataToCloud(
+      containers,
+      getWarehouseRecords(),
+      getWarehouseHistory()
+    ).catch(() => {});
+  }
+
   return primaryContainerId;
 }
 
@@ -1105,6 +1181,12 @@ export function addWarehouseRecord(input: WarehouseRecordInput): WarehouseRecord
   };
   saveWarehouseHistory([histEntry, ...getWarehouseHistory()]);
 
+  if (isCloudReadyForWrite()) {
+    saveWarehouseRecordToCloud(newRecord, true)
+      .then(() => saveWarehouseHistoryToCloud(histEntry))
+      .catch(() => {});
+  }
+
   return newRecord;
 }
 
@@ -1120,6 +1202,7 @@ export function updateWarehouseRecord(
 
   let updatedContainerName = 'Container';
   let summaryText = updates.changeNote || '';
+  let updatedRecRef: WarehouseRecord | null = null;
 
   const records = getWarehouseRecords().map((rec) => {
     if (rec.id !== id) return rec;
@@ -1199,6 +1282,7 @@ export function updateWarehouseRecord(
     };
 
     updatedContainerName = updated.containerName;
+    updatedRecRef = updated;
     if (!summaryText) {
       summaryText = `Updated warehouse record (${updated.containerName}) • Stock: "${updated.goodsInStock}" • Warehouse Takeout: "${updated.takeoutFromWarehouse}" • Condition: ${updated.goodsCondition} • Confirmation: ${updated.confirmationStatus} • Unaccounted: ${updated.unaccountedDetails} • Credit: ${formatMoney(updated.credit)}`;
     }
@@ -1219,6 +1303,12 @@ export function updateWarehouseRecord(
     date: nowStr,
   };
   saveWarehouseHistory([histEntry, ...getWarehouseHistory()]);
+
+  if (isCloudReadyForWrite() && updatedRecRef) {
+    saveWarehouseRecordToCloud(updatedRecRef as WarehouseRecord, false)
+      .then(() => saveWarehouseHistoryToCloud(histEntry))
+      .catch(() => {});
+  }
 }
 
 export function deleteWarehouseRecord(id: string, personName = 'Staff'): void {
@@ -1238,6 +1328,11 @@ export function deleteWarehouseRecord(id: string, personName = 'Staff'): void {
       date: nowStr,
     };
     saveWarehouseHistory([histEntry, ...getWarehouseHistory()]);
+    if (isCloudReadyForWrite()) {
+      deleteWarehouseRecordFromCloud(id)
+        .then(() => saveWarehouseHistoryToCloud(histEntry))
+        .catch(() => {});
+    }
   }
 }
 
@@ -1328,6 +1423,12 @@ export function importWarehouseRecords(
   };
   saveWarehouseHistory([histEntry, ...getWarehouseHistory()]);
 
+  if (isCloudReadyForWrite()) {
+    Promise.all(newRecords.map((r) => saveWarehouseRecordToCloud(r, true)))
+      .then(() => saveWarehouseHistoryToCloud(histEntry))
+      .catch(() => {});
+  }
+
   return newRecords.length;
 }
 
@@ -1342,5 +1443,47 @@ export function clearAllContainers(): void {
   saveWarehouseRecords([]);
   saveWarehouseHistory([]);
 }
+
+export async function syncLocalToCloudDatabase(): Promise<{
+  containersSynced: number;
+  warehouseRecordsSynced: number;
+}> {
+  return pushAllLocalDataToCloud(
+    getContainers(),
+    getWarehouseRecords(),
+    getWarehouseHistory()
+  );
+}
+
+export async function pullFromCloudDatabase(): Promise<boolean> {
+  const cloudData = await fetchAllFromCloud();
+  if (!cloudData) return false;
+  if (
+    cloudData.containers.length === 0 &&
+    cloudData.warehouseRecords.length === 0
+  ) {
+    // Cloud is empty: push current local records up to cloud
+    if (isCloudReadyForWrite()) {
+      await pushAllLocalDataToCloud(
+        getContainers(),
+        getWarehouseRecords(),
+        getWarehouseHistory()
+      );
+    }
+    return true;
+  }
+
+  if (cloudData.containers.length > 0) {
+    saveContainers(cloudData.containers);
+  }
+  if (cloudData.warehouseRecords.length > 0) {
+    saveWarehouseRecords(cloudData.warehouseRecords);
+  }
+  if (cloudData.warehouseHistory.length > 0) {
+    saveWarehouseHistory(cloudData.warehouseHistory);
+  }
+  return true;
+}
+
 
 

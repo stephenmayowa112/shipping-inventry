@@ -1,0 +1,328 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================
+    // Hardened Global Helpers
+    // =========================================================
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'stephenmayowa112@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // =========================================================
+    // Entity Validation Blueprints (Anti-Update-Gap)
+    // =========================================================
+    function isValidAdmin(data, adminUid) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'createdAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+        data.uid == adminUid && isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidStaffAccount(data, staffId) {
+      return data.keys().hasAll(['id', 'ownerId', 'username', 'displayName', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'ownerId', 'username', 'displayName', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id == staffId && isValidId(data.id) &&
+        data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId) &&
+        data.username is string && data.username.size() >= 2 && data.username.size() <= 64 &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidContainer(data, containerId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'name', 'warehouse', 'note',
+          'createdBy', 'updatedBy', 'createdAtIso', 'updatedAtIso',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'ownerId', 'name', 'warehouse', 'note',
+          'createdBy', 'updatedBy', 'createdAtIso', 'updatedAtIso',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.id is string && data.id == containerId && isValidId(data.id) &&
+        data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 160 &&
+        data.warehouse is string && data.warehouse.size() >= 1 && data.warehouse.size() <= 120 &&
+        data.note is string && data.note.size() <= 500 &&
+        data.createdBy is string && data.createdBy.size() >= 1 && data.createdBy.size() <= 120 &&
+        data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 120 &&
+        data.createdAtIso is string && data.createdAtIso.size() >= 1 && data.createdAtIso.size() <= 40 &&
+        data.updatedAtIso is string && data.updatedAtIso.size() >= 1 && data.updatedAtIso.size() <= 40 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidContainerItem(data, containerId, itemId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'containerId', 'containerName', 'name', 'phone',
+          'cbm', 'amount', 'takenStatus', 'taken', 'paid', 'credit',
+          'receiverName', 'receiverPhone', 'receiverDate', 'warehouse',
+          'addedDate', 'lastUpdated', 'addedBy', 'lastUpdatedBy',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'ownerId', 'containerId', 'containerName', 'name', 'phone',
+          'cbm', 'amount', 'takenStatus', 'taken', 'paid', 'credit',
+          'receiverName', 'receiverPhone', 'receiverDate', 'warehouse',
+          'addedDate', 'lastUpdated', 'addedBy', 'lastUpdatedBy',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.id is string && data.id == itemId && isValidId(data.id) &&
+        data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId) &&
+        data.containerId is string && data.containerId == containerId && isValidId(data.containerId) &&
+        data.containerName is string && data.containerName.size() >= 1 && data.containerName.size() <= 160 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 200 &&
+        data.phone is string && data.phone.size() <= 80 &&
+        data.cbm is number && data.cbm >= 0 &&
+        data.amount is number && data.amount >= 0 &&
+        data.takenStatus is string && data.takenStatus in ['Not Taken', 'Partial', 'Taken'] &&
+        data.taken is string && data.taken.size() >= 1 && data.taken.size() <= 300 &&
+        data.paid is number && data.paid >= 0 &&
+        data.credit is number && data.credit >= 0 &&
+        data.receiverName is string && data.receiverName.size() <= 160 &&
+        data.receiverPhone is string && data.receiverPhone.size() <= 80 &&
+        data.receiverDate is string && data.receiverDate.size() <= 40 &&
+        data.warehouse is string && data.warehouse.size() >= 1 && data.warehouse.size() <= 120 &&
+        data.addedDate is string && data.addedDate.size() >= 1 && data.addedDate.size() <= 40 &&
+        data.lastUpdated is string && data.lastUpdated.size() >= 1 && data.lastUpdated.size() <= 40 &&
+        data.addedBy is string && data.addedBy.size() >= 1 && data.addedBy.size() <= 120 &&
+        data.lastUpdatedBy is string && data.lastUpdatedBy.size() >= 1 && data.lastUpdatedBy.size() <= 120 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidItemHistory(data, containerId, historyId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'containerId', 'containerName', 'itemId',
+          'itemName', 'action', 'summary', 'personName', 'date', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'ownerId', 'containerId', 'containerName', 'itemId',
+          'itemName', 'action', 'summary', 'personName', 'date', 'createdAt'
+        ]) &&
+        data.id is string && data.id == historyId && isValidId(data.id) &&
+        data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId) &&
+        data.containerId is string && data.containerId == containerId && isValidId(data.containerId) &&
+        data.containerName is string && data.containerName.size() >= 1 && data.containerName.size() <= 160 &&
+        data.itemId is string && data.itemId.size() <= 128 &&
+        data.itemName is string && data.itemName.size() >= 1 && data.itemName.size() <= 200 &&
+        data.action is string && data.action in ['added', 'updated', 'payment', 'collected', 'deleted'] &&
+        data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 1000 &&
+        data.personName is string && data.personName.size() >= 1 && data.personName.size() <= 120 &&
+        data.date is string && data.date.size() >= 1 && data.date.size() <= 40 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidWarehouseRecord(data, recordId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'goodsInStock', 'goodsArrivalDate', 'containerName',
+          'takeoutFromContainer', 'takeoutFromWarehouse', 'warehouseName',
+          'offloaderName', 'personName', 'confirmationStatus', 'confirmationNote',
+          'goodsCondition', 'conditionDetails', 'hasUnaccounted', 'unaccountedDetails',
+          'credit', 'createdAtIso', 'updatedAtIso', 'lastUpdatedBy',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'ownerId', 'goodsInStock', 'goodsArrivalDate', 'containerName',
+          'takeoutFromContainer', 'takeoutFromWarehouse', 'warehouseName',
+          'offloaderName', 'personName', 'confirmationStatus', 'confirmationNote',
+          'goodsCondition', 'conditionDetails', 'hasUnaccounted', 'unaccountedDetails',
+          'credit', 'createdAtIso', 'updatedAtIso', 'lastUpdatedBy',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.id is string && data.id == recordId && isValidId(data.id) &&
+        data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId) &&
+        data.goodsInStock is string && data.goodsInStock.size() >= 1 && data.goodsInStock.size() <= 400 &&
+        data.goodsArrivalDate is string && data.goodsArrivalDate.size() >= 1 && data.goodsArrivalDate.size() <= 40 &&
+        data.containerName is string && data.containerName.size() >= 1 && data.containerName.size() <= 160 &&
+        data.takeoutFromContainer is string && data.takeoutFromContainer.size() >= 1 && data.takeoutFromContainer.size() <= 400 &&
+        data.takeoutFromWarehouse is string && data.takeoutFromWarehouse.size() >= 1 && data.takeoutFromWarehouse.size() <= 400 &&
+        data.warehouseName is string && data.warehouseName.size() >= 1 && data.warehouseName.size() <= 120 &&
+        data.offloaderName is string && data.offloaderName.size() >= 1 && data.offloaderName.size() <= 120 &&
+        data.personName is string && data.personName.size() >= 1 && data.personName.size() <= 120 &&
+        data.confirmationStatus is string && data.confirmationStatus in ['Confirmed', 'Pending'] &&
+        data.confirmationNote is string && data.confirmationNote.size() <= 400 &&
+        data.goodsCondition is string && data.goodsCondition in ['Good', 'Damaged', 'Part Damaged'] &&
+        data.conditionDetails is string && data.conditionDetails.size() >= 1 && data.conditionDetails.size() <= 400 &&
+        data.hasUnaccounted is bool &&
+        data.unaccountedDetails is string && data.unaccountedDetails.size() >= 1 && data.unaccountedDetails.size() <= 400 &&
+        data.credit is number && data.credit >= 0 &&
+        data.createdAtIso is string && data.createdAtIso.size() >= 1 && data.createdAtIso.size() <= 40 &&
+        data.updatedAtIso is string && data.updatedAtIso.size() >= 1 && data.updatedAtIso.size() <= 40 &&
+        data.lastUpdatedBy is string && data.lastUpdatedBy.size() >= 1 && data.lastUpdatedBy.size() <= 120 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidWarehouseHistory(data, historyId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'recordId', 'containerName', 'action',
+          'summary', 'personName', 'date', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'ownerId', 'recordId', 'containerName', 'action',
+          'summary', 'personName', 'date', 'createdAt'
+        ]) &&
+        data.id is string && data.id == historyId && isValidId(data.id) &&
+        data.ownerId is string && data.ownerId == request.auth.uid && isValidId(data.ownerId) &&
+        data.recordId is string && isValidId(data.recordId) &&
+        data.containerName is string && data.containerName.size() >= 1 && data.containerName.size() <= 160 &&
+        data.action is string && data.action in ['added', 'updated', 'confirmed', 'deleted'] &&
+        data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 1000 &&
+        data.personName is string && data.personName.size() >= 1 && data.personName.size() <= 120 &&
+        data.date is string && data.date.size() >= 1 && data.date.size() <= 40 &&
+        data.createdAt is timestamp;
+    }
+
+    // =========================================================
+    // Collection Match Blocks
+    // =========================================================
+
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid) && (request.auth.uid == adminUid || isAdmin());
+      allow list: if false;
+      allow create: if isAdmin() && isValidId(adminUid) && isValidAdmin(incoming(), adminUid) && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(adminUid);
+    }
+
+    match /staffAccounts/{staffId} {
+      allow get: if isSignedIn() && isValidId(staffId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser() && isValidId(staffId) && isValidStaffAccount(incoming(), staffId) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() && isValidId(staffId) && isValidStaffAccount(incoming(), staffId) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['username', 'displayName', 'updatedAt']) &&
+        (existing().ownerId == request.auth.uid || isAdmin());
+      allow delete: if isVerifiedUser() && isValidId(staffId) && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /containers/{containerId} {
+      allow get: if isSignedIn() && isValidId(containerId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser() && isValidId(containerId) && isValidContainer(incoming(), containerId) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() && isValidId(containerId) && isValidContainer(incoming(), containerId) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().createdAtIso == existing().createdAtIso &&
+        incoming().createdBy == existing().createdBy &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'warehouse', 'note', 'updatedBy', 'updatedAtIso', 'updatedAt']) &&
+        (existing().ownerId == request.auth.uid || isAdmin());
+      allow delete: if isVerifiedUser() && isValidId(containerId) && (existing().ownerId == request.auth.uid || isAdmin());
+
+      match /items/{itemId} {
+        allow get: if isSignedIn() && isValidId(containerId) && isValidId(itemId) &&
+          (existing().ownerId == request.auth.uid || isAdmin()) &&
+          (get(/databases/$(database)/documents/containers/$(containerId)).data.ownerId == request.auth.uid || isAdmin());
+        allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+        allow create: if isVerifiedUser() && isValidId(containerId) && isValidId(itemId) &&
+          isValidContainerItem(incoming(), containerId, itemId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          (get(/databases/$(database)/documents/containers/$(containerId)).data.ownerId == request.auth.uid || isAdmin());
+        allow update: if isVerifiedUser() && isValidId(containerId) && isValidId(itemId) &&
+          isValidContainerItem(incoming(), containerId, itemId) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().containerId == existing().containerId &&
+          incoming().addedDate == existing().addedDate &&
+          incoming().addedBy == existing().addedBy &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'containerName', 'name', 'phone', 'cbm', 'amount',
+            'takenStatus', 'taken', 'paid', 'credit',
+            'receiverName', 'receiverPhone', 'receiverDate',
+            'warehouse', 'lastUpdated', 'lastUpdatedBy', 'updatedAt'
+          ]) &&
+          (get(/databases/$(database)/documents/containers/$(containerId)).data.ownerId == request.auth.uid || isAdmin()) &&
+          (existing().ownerId == request.auth.uid || isAdmin());
+        allow delete: if isVerifiedUser() && isValidId(containerId) && isValidId(itemId) &&
+          (existing().ownerId == request.auth.uid || isAdmin()) &&
+          (get(/databases/$(database)/documents/containers/$(containerId)).data.ownerId == request.auth.uid || isAdmin());
+      }
+
+      match /history/{historyId} {
+        allow get: if isSignedIn() && isValidId(containerId) && isValidId(historyId) &&
+          (existing().ownerId == request.auth.uid || isAdmin()) &&
+          (get(/databases/$(database)/documents/containers/$(containerId)).data.ownerId == request.auth.uid || isAdmin());
+        allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+        allow create: if isVerifiedUser() && isValidId(containerId) && isValidId(historyId) &&
+          isValidItemHistory(incoming(), containerId, historyId) &&
+          incoming().createdAt == request.time &&
+          (get(/databases/$(database)/documents/containers/$(containerId)).data.ownerId == request.auth.uid || isAdmin());
+        allow update: if false;
+        allow delete: if isVerifiedUser() && isValidId(containerId) && isValidId(historyId) &&
+          (existing().ownerId == request.auth.uid || isAdmin()) &&
+          (get(/databases/$(database)/documents/containers/$(containerId)).data.ownerId == request.auth.uid || isAdmin());
+      }
+    }
+
+    match /warehouseRecords/{recordId} {
+      allow get: if isSignedIn() && isValidId(recordId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser() && isValidId(recordId) && isValidWarehouseRecord(incoming(), recordId) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() && isValidId(recordId) && isValidWarehouseRecord(incoming(), recordId) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().createdAtIso == existing().createdAtIso &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'goodsInStock', 'goodsArrivalDate', 'containerName',
+          'takeoutFromContainer', 'takeoutFromWarehouse', 'warehouseName',
+          'offloaderName', 'personName', 'confirmationStatus', 'confirmationNote',
+          'goodsCondition', 'conditionDetails', 'hasUnaccounted', 'unaccountedDetails',
+          'credit', 'updatedAtIso', 'lastUpdatedBy', 'updatedAt'
+        ]) &&
+        (existing().ownerId == request.auth.uid || isAdmin());
+      allow delete: if isVerifiedUser() && isValidId(recordId) && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /warehouseHistory/{historyId} {
+      allow get: if isSignedIn() && isValidId(historyId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser() && isValidId(historyId) && isValidWarehouseHistory(incoming(), historyId) &&
+        incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isVerifiedUser() && isValidId(historyId) && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+  }
+}

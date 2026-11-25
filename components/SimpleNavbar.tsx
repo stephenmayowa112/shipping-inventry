@@ -8,6 +8,8 @@ import {
   FileSpreadsheet,
   FileText,
   X,
+  Database,
+  LogOut,
 } from 'lucide-react';
 import { Container, WarehouseRecord } from '@/lib/types';
 import {
@@ -16,6 +18,7 @@ import {
   exportWarehouseRecordsToExcel,
   exportWarehouseRecordsToPdf,
 } from '@/lib/exportUtils';
+import { ActiveStaffSession } from '@/lib/cloudSync';
 
 export type InventoryMode = 'customer' | 'warehouse';
 
@@ -27,6 +30,9 @@ interface SimpleNavbarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onGoHome: () => void;
+  session?: ActiveStaffSession | null;
+  onOpenDatabaseModal?: () => void;
+  onSignOut?: () => void;
 }
 
 export function SimpleNavbar({
@@ -37,11 +43,14 @@ export function SimpleNavbar({
   searchQuery,
   onSearchChange,
   onGoHome,
+  session,
+  onOpenDatabaseModal,
+  onSignOut,
 }: SimpleNavbarProps) {
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 space-y-3">
-        {/* Top Row: Brand Name & Export Buttons */}
+        {/* Top Row: Brand Name & Export / Database Buttons */}
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
@@ -55,13 +64,32 @@ export function SimpleNavbar({
                 <Package className="w-5 h-5" />
               )}
             </div>
-            <span className="font-black text-base sm:text-xl tracking-tight text-slate-900 truncate">
-              Deep Down Logistics
-            </span>
+            <div className="min-w-0">
+              <span className="font-black text-base sm:text-xl tracking-tight text-slate-900 truncate block">
+                Deep Down Logistics
+              </span>
+              {session && (
+                <span className="text-[11px] font-semibold text-slate-500 truncate block">
+                  Staff: {session.displayName}
+                </span>
+              )}
+            </div>
           </button>
 
-          {/* Direct Excel & PDF Export Buttons (Visible on all screens) */}
+          {/* Direct Excel, PDF, Database & Sign Out Buttons */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {onOpenDatabaseModal && (
+              <button
+                type="button"
+                onClick={onOpenDatabaseModal}
+                className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs sm:text-sm font-bold text-white transition-colors min-h-[40px]"
+                title="Database Location & Staff Logins"
+              >
+                <Database className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="hidden sm:inline">Database</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() =>
@@ -87,6 +115,18 @@ export function SimpleNavbar({
               <FileText className="w-4 h-4 text-rose-600 shrink-0" />
               <span>PDF</span>
             </button>
+
+            {onSignOut && (
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="inline-flex items-center space-x-1 px-2.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-colors min-h-[40px]"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4 shrink-0" />
+                <span className="hidden md:inline">Sign Out</span>
+              </button>
+            )}
           </div>
         </div>
 

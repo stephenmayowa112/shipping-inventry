@@ -1,0 +1,656 @@
+{
+  "entities": {
+    "Admin": {
+      "title": "Admin",
+      "description": "Trusted administrator marker document.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the administrator.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified email address of the administrator.",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when admin record was created."
+        }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "StaffAccount": {
+      "title": "StaffAccount",
+      "description": "Staff user profile for Deep Down Logistics authentication.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document ID matching the staff identifier.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID owning this staff account record.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "username": {
+          "type": "string",
+          "description": "Simple staff login username.",
+          "minLength": 2,
+          "maxLength": 64
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Full name of the staff member.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when last updated."
+        }
+      },
+      "required": ["id", "ownerId", "username", "displayName", "createdAt", "updatedAt"]
+    },
+    "Container": {
+      "title": "Container",
+      "description": "Shipping container header record.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique container ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the authenticated owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Container name or identifier.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "warehouse": {
+          "type": "string",
+          "description": "Assigned warehouse name.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional container note.",
+          "maxLength": 500
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "Staff member who created the container.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "Staff member who last updated the container.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "createdAtIso": {
+          "type": "string",
+          "description": "ISO timestamp string for UI display.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "updatedAtIso": {
+          "type": "string",
+          "description": "ISO timestamp string for UI display.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp on creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp on update."
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "name",
+        "warehouse",
+        "note",
+        "createdBy",
+        "updatedBy",
+        "createdAtIso",
+        "updatedAtIso",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ContainerItem": {
+      "title": "ContainerItem",
+      "description": "10-field customer cargo entry inside a container.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique item ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the authenticated owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "containerId": {
+          "type": "string",
+          "description": "Parent container ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "containerName": {
+          "type": "string",
+          "description": "Parent container name.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "name": {
+          "type": "string",
+          "description": "Customer or cargo owner name.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "phone": {
+          "type": "string",
+          "description": "Customer phone number.",
+          "maxLength": 80
+        },
+        "cbm": {
+          "type": "number",
+          "description": "Cubic meters (CBM) volume."
+        },
+        "amount": {
+          "type": "number",
+          "description": "Total billed amount."
+        },
+        "takenStatus": {
+          "type": "string",
+          "enum": ["Not Taken", "Partial", "Taken"],
+          "description": "Collection status."
+        },
+        "taken": {
+          "type": "string",
+          "description": "Detailed taken status or quantity.",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "paid": {
+          "type": "number",
+          "description": "Amount paid so far."
+        },
+        "credit": {
+          "type": "number",
+          "description": "Outstanding balance (Amount - Paid)."
+        },
+        "receiverName": {
+          "type": "string",
+          "description": "Receiver name.",
+          "maxLength": 160
+        },
+        "receiverPhone": {
+          "type": "string",
+          "description": "Receiver phone number.",
+          "maxLength": 80
+        },
+        "receiverDate": {
+          "type": "string",
+          "description": "Receiver collection date.",
+          "maxLength": 40
+        },
+        "warehouse": {
+          "type": "string",
+          "description": "Warehouse name.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "addedDate": {
+          "type": "string",
+          "description": "Date added string.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "lastUpdated": {
+          "type": "string",
+          "description": "Last updated display string.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "addedBy": {
+          "type": "string",
+          "description": "Staff who added the item.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "lastUpdatedBy": {
+          "type": "string",
+          "description": "Staff who last updated the item.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp on creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp on update."
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "containerId",
+        "containerName",
+        "name",
+        "phone",
+        "cbm",
+        "amount",
+        "takenStatus",
+        "taken",
+        "paid",
+        "credit",
+        "receiverName",
+        "receiverPhone",
+        "receiverDate",
+        "warehouse",
+        "addedDate",
+        "lastUpdated",
+        "addedBy",
+        "lastUpdatedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ItemHistory": {
+      "title": "ItemHistory",
+      "description": "Audit log entry for container cargo operations.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique history entry ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the authenticated owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "containerId": {
+          "type": "string",
+          "description": "Parent container ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "containerName": {
+          "type": "string",
+          "description": "Parent container name.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "itemId": {
+          "type": "string",
+          "description": "Target cargo item ID if applicable.",
+          "maxLength": 128
+        },
+        "itemName": {
+          "type": "string",
+          "description": "Target cargo customer name or label.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "action": {
+          "type": "string",
+          "enum": ["added", "updated", "payment", "collected", "deleted"],
+          "description": "Type of operation."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Human-readable audit summary.",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "personName": {
+          "type": "string",
+          "description": "Staff member who performed the action.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "date": {
+          "type": "string",
+          "description": "Display date/time string.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp on creation."
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "containerId",
+        "containerName",
+        "itemId",
+        "itemName",
+        "action",
+        "summary",
+        "personName",
+        "date",
+        "createdAt"
+      ]
+    },
+    "WarehouseRecord": {
+      "title": "WarehouseRecord",
+      "description": "10-field warehouse inventory record.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique warehouse record ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the authenticated owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "goodsInStock": {
+          "type": "string",
+          "description": "Goods currently in stock.",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "goodsArrivalDate": {
+          "type": "string",
+          "description": "Arrival date string.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "containerName": {
+          "type": "string",
+          "description": "Source container name.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "takeoutFromContainer": {
+          "type": "string",
+          "description": "Goods offloaded from container.",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "takeoutFromWarehouse": {
+          "type": "string",
+          "description": "Goods dispatched from warehouse.",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "warehouseName": {
+          "type": "string",
+          "description": "Official warehouse name.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "offloaderName": {
+          "type": "string",
+          "description": "Name of container offloader.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "personName": {
+          "type": "string",
+          "description": "Name of staff member recording.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "confirmationStatus": {
+          "type": "string",
+          "enum": ["Confirmed", "Pending"],
+          "description": "Tally confirmation status."
+        },
+        "confirmationNote": {
+          "type": "string",
+          "description": "Optional confirmation note.",
+          "maxLength": 400
+        },
+        "goodsCondition": {
+          "type": "string",
+          "enum": ["Good", "Damaged", "Part Damaged"],
+          "description": "Condition of goods."
+        },
+        "conditionDetails": {
+          "type": "string",
+          "description": "Details on goods condition.",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "hasUnaccounted": {
+          "type": "boolean",
+          "description": "Whether there are missing/unaccounted goods."
+        },
+        "unaccountedDetails": {
+          "type": "string",
+          "description": "Details of missing goods.",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "credit": {
+          "type": "number",
+          "description": "Credit balance for container."
+        },
+        "createdAtIso": {
+          "type": "string",
+          "description": "ISO creation string for UI.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "updatedAtIso": {
+          "type": "string",
+          "description": "ISO update string for UI.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "lastUpdatedBy": {
+          "type": "string",
+          "description": "Staff member who last updated.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp on creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp on update."
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "goodsInStock",
+        "goodsArrivalDate",
+        "containerName",
+        "takeoutFromContainer",
+        "takeoutFromWarehouse",
+        "warehouseName",
+        "offloaderName",
+        "personName",
+        "confirmationStatus",
+        "confirmationNote",
+        "goodsCondition",
+        "conditionDetails",
+        "hasUnaccounted",
+        "unaccountedDetails",
+        "credit",
+        "createdAtIso",
+        "updatedAtIso",
+        "lastUpdatedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WarehouseHistory": {
+      "title": "WarehouseHistory",
+      "description": "Audit log entry for warehouse inventory operations.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique warehouse history ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the authenticated owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "recordId": {
+          "type": "string",
+          "description": "Target warehouse record ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "containerName": {
+          "type": "string",
+          "description": "Container name.",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "action": {
+          "type": "string",
+          "enum": ["added", "updated", "confirmed", "deleted"],
+          "description": "Warehouse action type."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Audit log summary.",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "personName": {
+          "type": "string",
+          "description": "Staff member who performed the action.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "date": {
+          "type": "string",
+          "description": "Display timestamp string.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp on creation."
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "recordId",
+        "containerName",
+        "action",
+        "summary",
+        "personName",
+        "date",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Administrator role lookup documents."
+    },
+    "/staffAccounts/{staffId}": {
+      "schema": { "$ref": "#/entities/StaffAccount" },
+      "description": "Staff account profiles owned by the authenticated user."
+    },
+    "/containers/{containerId}": {
+      "schema": { "$ref": "#/entities/Container" },
+      "description": "Shipping container header documents."
+    },
+    "/containers/{containerId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/ContainerItem" },
+      "description": "Customer cargo items subcollection inside a shipping container."
+    },
+    "/containers/{containerId}/history/{historyId}": {
+      "schema": { "$ref": "#/entities/ItemHistory" },
+      "description": "Audit history subcollection for a shipping container."
+    },
+    "/warehouseRecords/{recordId}": {
+      "schema": { "$ref": "#/entities/WarehouseRecord" },
+      "description": "Warehouse inventory records."
+    },
+    "/warehouseHistory/{historyId}": {
+      "schema": { "$ref": "#/entities/WarehouseHistory" },
+      "description": "Warehouse inventory audit logs."
+    }
+  }
+}
