@@ -534,7 +534,7 @@ export function UploadManifestModal({
         reader.readAsDataURL(file);
       });
 
-      const res = await fetch('/api/parse-manifest', {
+      const res = await fetch('/inventory/api/parse-manifest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

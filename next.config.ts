@@ -1,6 +1,7 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  basePath: '/inventory',
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,
@@ -21,15 +22,19 @@ const nextConfig: NextConfig = {
   },
   output: 'standalone',
   transpilePackages: ['motion'],
-  async rewrites() {
+  async redirects() {
     return [
       {
-        source: '/inventry/api/:path*',
-        destination: '/api/:path*',
+        source: '/',
+        destination: '/inventory',
+        basePath: false,
+        permanent: false,
       },
       {
-        source: '/inventory/api/:path*',
-        destination: '/api/:path*',
+        source: '/inventry',
+        destination: '/inventory',
+        basePath: false,
+        permanent: false,
       },
     ];
   },

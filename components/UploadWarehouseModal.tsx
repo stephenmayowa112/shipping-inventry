@@ -266,7 +266,7 @@ export function UploadWarehouseModal({
     mimeType?: string;
   }) => {
     try {
-      const res = await fetch('/api/parse-manifest', {
+      const res = await fetch('/inventory/api/parse-manifest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...payload, mode: 'warehouse' }),
