@@ -177,9 +177,28 @@ export default function Home() {
 
       <footer className="border-t border-slate-200 bg-white py-4 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
-          <span className="font-bold text-slate-800">Deep Down Logistics</span>
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1">
+            <span className="font-bold text-slate-800">Deep Down Logistics</span>
+            <span className="text-slate-300">•</span>
+            <a
+              href="https://www.deepdownlogistics.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline font-bold"
+            >
+              www.deepdownlogistics.com
+            </a>
+          </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <a
+              href="https://www.deepdownlogistics.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-700 hover:text-slate-900 hover:underline font-bold"
+            >
+              Official Website
+            </a>
             <button
               type="button"
               onClick={() => setIsDatabaseModalOpen(true)}

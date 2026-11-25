@@ -276,6 +276,18 @@ export function LoginScreen({ onSignedIn }: LoginScreenProps) {
             <Cloud className="w-4 h-4 text-blue-600" />
             <span>Sign In with Google (Cloud Firestore Sync)</span>
           </button>
+
+          <div className="pt-2 border-t border-slate-100 text-center">
+            <a
+              href="https://www.deepdownlogistics.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:underline"
+            >
+              <span>Visit Official Website — www.deepdownlogistics.com</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
         </form>
       </div>
     </div>
